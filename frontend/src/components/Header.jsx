@@ -52,7 +52,7 @@ export default function Header() {
           borderRadius: '50px',
           border: '1px solid rgba(99, 102, 241, 0.25)',
           boxShadow: '0 10px 30px rgba(0, 0, 0, 0.6), 0 0 20px rgba(99, 102, 241, 0.1)',
-          overflow: 'hidden',
+          overflow: 'visible',
           display: 'flex',
           alignItems: 'center',
           height: '60px',

@@ -63,7 +63,7 @@ router.post('/login', async (req, res) => {
     // Get user
     const user = await User.findOne({ username });
     if (!user) {
-      return res.status(401).json({ success: false, message: 'Invalid username or password' });
+      return res.status(401).json({ success: false, message: 'Account does not exist, sign up first' });
     }
 
     // Check password
@@ -76,7 +76,7 @@ router.post('/login', async (req, res) => {
     if (role && user.role !== role) {
       return res.status(401).json({ 
         success: false, 
-        message: `Role mismatch. You registered as a ${user.role === 'landlord' ? 'landlord' : 'tenant (user)'} and must log in under that role.` 
+        message: 'Login as incorrect role' 
       });
     }
 

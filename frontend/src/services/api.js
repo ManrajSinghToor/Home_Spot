@@ -291,12 +291,24 @@ export const api = {
   auth: {
     login: async (username, password, role) => {
       await delay(200);
-      const response = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password, role })
-      });
-      const data = await response.json();
+      let response;
+      try {
+        response = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, password, role })
+        });
+      } catch (e) {
+        throw new Error('Connection refused. Please make sure the backend server is running on port 5001.');
+      }
+
+      let data;
+      try {
+        data = await response.json();
+      } catch (e) {
+        throw new Error('Server returned an empty or invalid response. Please check if the backend server is running.');
+      }
+
       if (!response.ok || !data.success) throw new Error(data.message || 'Login failed.');
       if (data.token) {
         localStorage.setItem('token', data.token);
@@ -306,12 +318,24 @@ export const api = {
 
     signup: async (userData) => {
       await delay(200);
-      const response = await fetch('/api/auth/signup', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(userData)
-      });
-      const data = await response.json();
+      let response;
+      try {
+        response = await fetch('/api/auth/signup', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(userData)
+        });
+      } catch (e) {
+        throw new Error('Connection refused. Please make sure the backend server is running on port 5001.');
+      }
+
+      let data;
+      try {
+        data = await response.json();
+      } catch (e) {
+        throw new Error('Server returned an empty or invalid response. Please check if the backend server is running.');
+      }
+
       if (!response.ok || !data.success) throw new Error(data.message || 'Signup failed.');
       if (data.token) {
         localStorage.setItem('token', data.token);
