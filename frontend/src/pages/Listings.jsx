@@ -173,6 +173,7 @@ export default function Listings() {
 
   // Dynamic property list loaded from API
   const [allProperties, setAllProperties] = useState([]);
+  const [userFavorites, setUserFavorites] = useState([]);
 
   useEffect(() => {
     async function loadListings() {
@@ -190,10 +191,25 @@ export default function Listings() {
     setComparisonProperties(storedCompare);
   }, []);
 
+  useEffect(() => {
+    async function loadUserFavorites() {
+      if (user) {
+        try {
+          const list = await api.favorites.getFavorites();
+          setUserFavorites(list || []);
+        } catch (error) {
+          console.error('Error loading favorites in Listings:', error);
+        }
+      }
+    }
+    loadUserFavorites();
+  }, [user]);
+
   // Helper function to extract price number from price string
   const getPriceNumber = (priceString) => {
-    const match = priceString.match(/₹([\d,]+)/);
-    return match ? parseInt(match[1].replace(/,/g, '')) : 0;
+    if (!priceString) return 0;
+    const cleanStr = String(priceString).replace(/[^\d]/g, '');
+    return cleanStr ? parseInt(cleanStr, 10) : 0;
   };
 
   // Track recently viewed properties
@@ -305,8 +321,9 @@ export default function Listings() {
     if (searchFilters.minPrice) newParams.set('minPrice', searchFilters.minPrice);
     if (searchFilters.maxPrice) newParams.set('maxPrice', searchFilters.maxPrice);
     if (sortBy !== 'default') newParams.set('sort', sortBy);
-    if (currentPage > 1) newParams.set('page', currentPage.toString());
+    newParams.set('page', '1');
     
+    setCurrentPage(1);
     setSearchParams(newParams);
   };
 
@@ -340,7 +357,7 @@ export default function Listings() {
   };
 
   // Handle add to favorites
-  const handleAddToFavorites = (property, e) => {
+  const handleAddToFavorites = async (property, e) => {
     e?.stopPropagation();
     if (!user) {
       showToast('Please login to add favorites', 'warning');
@@ -348,28 +365,19 @@ export default function Listings() {
       return;
     }
     
-    const favorites = JSON.parse(localStorage.getItem('favorites')) || [];
-    const isAlreadyFavorite = favorites.some(fav => fav.id === property.id);
+    const isAlreadyFavorite = userFavorites.some(fav => (fav._id || fav.id) === (property._id || property.id));
     
-    if (!isAlreadyFavorite) {
-      const favoriteProperty = {
-        id: property.id,
-        title: property.title,
-        imgSrc: property.image,
-        imgAlt: property.title,
-        beds: `${property.beds} Beds`,
-        baths: `${property.baths} Baths`,
-        sqft: `${property.sqft} sqft`,
-        price: property.price,
-        location: property.address,
-        city: property.city
-      };
-      
-      favorites.push(favoriteProperty);
-      localStorage.setItem('favorites', JSON.stringify(favorites));
-      showToast('Property added to favorites!', 'success');
-    } else {
-      showToast('Property is already in your favorites!', 'info');
+    try {
+      const updated = await api.favorites.toggleFavorite(property, !isAlreadyFavorite);
+      setUserFavorites(updated || []);
+      if (!isAlreadyFavorite) {
+        showToast('Property added to favorites!', 'success');
+      } else {
+        showToast('Property removed from favorites!', 'info');
+      }
+    } catch (error) {
+      console.error('Error toggling favorite:', error);
+      showToast('Failed to update favorite', 'error');
     }
   };
 
@@ -451,7 +459,7 @@ export default function Listings() {
               }}>
                 <select 
                   value={searchFilters.city}
-                  onChange={(e) => setSearchFilters(prev => ({ ...prev, city: e.target.value }))}
+                  onChange={(e) => { setSearchFilters(prev => ({ ...prev, city: e.target.value })); setCurrentPage(1); }}
                   className="glass-select"
                 >
                   <option value="">Select city</option>
@@ -463,7 +471,7 @@ export default function Listings() {
                 
                 <select 
                   value={searchFilters.rooms}
-                  onChange={(e) => setSearchFilters(prev => ({ ...prev, rooms: e.target.value }))}
+                  onChange={(e) => { setSearchFilters(prev => ({ ...prev, rooms: e.target.value })); setCurrentPage(1); }}
                   className="glass-select"
                 >
                   <option value="">Select rooms</option>
@@ -478,7 +486,7 @@ export default function Listings() {
                   type="text"
                   placeholder="Min Price (₹)"
                   value={searchFilters.minPrice}
-                  onChange={(e) => setSearchFilters(prev => ({ ...prev, minPrice: e.target.value }))}
+                  onChange={(e) => { setSearchFilters(prev => ({ ...prev, minPrice: e.target.value })); setCurrentPage(1); }}
                   className="glass-input"
                 />
                 
@@ -486,13 +494,13 @@ export default function Listings() {
                   type="text"
                   placeholder="Max Price (₹)"
                   value={searchFilters.maxPrice}
-                  onChange={(e) => setSearchFilters(prev => ({ ...prev, maxPrice: e.target.value }))}
+                  onChange={(e) => { setSearchFilters(prev => ({ ...prev, maxPrice: e.target.value })); setCurrentPage(1); }}
                   className="glass-input"
                 />
                 
                 <select
                   value={sortBy}
-                  onChange={(e) => setSortBy(e.target.value)}
+                  onChange={(e) => { setSortBy(e.target.value); setCurrentPage(1); }}
                   className="glass-select"
                 >
                   <option value="default">Sort By</option>
@@ -553,33 +561,46 @@ export default function Listings() {
                 </div>
               ) : (
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(290px, 1fr))', gap: '25px' }}>
-                  {displayedProperties.map((property) => (
-                    <ThreeDTilt 
-                      key={property.id}
-                      className="property-card glass-panel"
-                      maxTilt={6}
-                      scale={1.01}
-                      onMouseEnter={() => setHoveredProperty(property)}
-                      onMouseLeave={() => setHoveredProperty(null)}
-                      onClick={() => handleViewDetails(property)}
-                      style={{ border: '1px solid rgba(255,255,255,0.08)', cursor: 'pointer' }}
-                    >
-                      <div style={{ position: 'relative' }}>
-                        <img 
-                          src={property.image} 
-                          alt={property.title}
-                          style={{ width: '100%', height: '180px', objectFit: 'cover', display: 'block' }}
-                        />
-                        
-                        {/* Actions overlay */}
-                        <div style={{ position: 'absolute', top: '10px', right: '10px', display: 'flex', gap: '8px', zIndex: 3 }} onClick={e => e.stopPropagation()}>
-                          <button
-                            onClick={(e) => handleAddToFavorites(property, e)}
-                            style={{ background: 'rgba(9,9,11,0.75)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '50%', width: '34px', height: '34px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#ef4444' }}
-                            title="Add to Favorites"
-                          >
-                            <i className="fas fa-heart"></i>
-                          </button>
+                  {displayedProperties.map((property) => {
+                    const isFav = userFavorites.some(fav => (fav._id || fav.id) === (property._id || property.id));
+                    return (
+                      <ThreeDTilt 
+                        key={property.id}
+                        className="property-card glass-panel"
+                        maxTilt={6}
+                        scale={1.01}
+                        onMouseEnter={() => setHoveredProperty(property)}
+                        onMouseLeave={() => setHoveredProperty(null)}
+                        onClick={() => handleViewDetails(property)}
+                        style={{ border: '1px solid rgba(255,255,255,0.08)', cursor: 'pointer' }}
+                      >
+                        <div style={{ position: 'relative' }}>
+                          <img 
+                            src={property.image} 
+                            alt={property.title}
+                            style={{ width: '100%', height: '180px', objectFit: 'cover', display: 'block' }}
+                          />
+                          
+                          {/* Actions overlay */}
+                          <div style={{ position: 'absolute', top: '10px', right: '10px', display: 'flex', gap: '8px', zIndex: 3 }} onClick={e => e.stopPropagation()}>
+                            <button
+                              onClick={(e) => handleAddToFavorites(property, e)}
+                              style={{ 
+                                background: 'rgba(9,9,11,0.75)', 
+                                border: '1px solid rgba(255,255,255,0.1)', 
+                                borderRadius: '50%', 
+                                width: '34px', 
+                                height: '34px', 
+                                display: 'flex', 
+                                alignItems: 'center', 
+                                justifyContent: 'center', 
+                                cursor: 'pointer', 
+                                color: isFav ? '#ef4444' : '#a1a1aa' 
+                              }}
+                              title={isFav ? "Remove from Favorites" : "Add to Favorites"}
+                            >
+                              <i className={isFav ? "fas fa-heart" : "far fa-heart"}></i>
+                            </button>
                           
                           <button
                             onClick={(e) => handleToggleComparison(property, e)}
@@ -618,9 +639,10 @@ export default function Listings() {
                         </button>
                       </div>
                     </ThreeDTilt>
-                  ))}
-                </div>
-              )}
+                  );
+                })}
+              </div>
+            )}
 
               {/* Pagination controls */}
               {totalPages > 1 && (
@@ -693,7 +715,30 @@ export default function Listings() {
                 
                 <div style={{ display: 'flex', gap: '15px' }}>
                   <button onClick={() => handleBooking(selectedProperty)} className="glow-btn" style={{ flex: 1, padding: '12px', background: 'var(--primary-gradient)', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '1rem', fontWeight: '600', cursor: 'pointer' }}>Book Now</button>
-                  <button onClick={(e) => handleAddToFavorites(selectedProperty, e)} style={{ padding: '12px 24px', background: 'rgba(255,255,255,0.05)', color: '#ef4444', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', fontSize: '1rem', fontWeight: '600', cursor: 'pointer' }}><i className="fas fa-heart"></i> Add Favorite</button>
+                  {(() => {
+                    const isFav = userFavorites.some(fav => (fav._id || fav.id) === (selectedProperty._id || selectedProperty.id));
+                    return (
+                      <button 
+                        onClick={(e) => handleAddToFavorites(selectedProperty, e)} 
+                        style={{ 
+                          padding: '12px 24px', 
+                          background: 'rgba(255,255,255,0.05)', 
+                          color: isFav ? '#ef4444' : '#a1a1aa', 
+                          border: '1px solid rgba(255,255,255,0.1)', 
+                          borderRadius: '8px', 
+                          fontSize: '1rem', 
+                          fontWeight: '600', 
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '8px'
+                        }}
+                      >
+                        <i className={isFav ? "fas fa-heart" : "far fa-heart"}></i> 
+                        {isFav ? "Remove Favorite" : "Add Favorite"}
+                      </button>
+                    );
+                  })()}
                 </div>
               </div>
             </motion.div>

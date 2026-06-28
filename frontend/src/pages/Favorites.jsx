@@ -1,375 +1,260 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useUser } from '../contexts/UserContext';
+import { useToast } from '../components/Toast';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
+import ThreeDTilt from '../components/ThreeDTilt';
+import PageTransition from '../components/PageTransition';
+import { api } from '../services/api';
 
 export default function Favorites() {
-  const { user, logout } = useUser();
+  const { user } = useUser();
+  const { showToast } = useToast();
   const navigate = useNavigate();
   const [favorites, setFavorites] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // Load favorites from localStorage on component mount
+  // Load favorites from the API
   useEffect(() => {
     if (!user) {
-      navigate('/');
+      navigate('/login');
       return;
     }
 
-    try {
-      const storedFavorites = JSON.parse(localStorage.getItem('favorites')) || [];
-      setFavorites(storedFavorites);
-    } catch (error) {
-      console.error('Error loading favorites:', error);
-      setFavorites([]);
-    } finally {
-      setLoading(false);
-    }
+    const fetchFavorites = async () => {
+      try {
+        const data = await api.favorites.getFavorites();
+        setFavorites(data || []);
+      } catch (error) {
+        console.error('Error fetching favorites:', error);
+        // Fallback to localStorage if API fails
+        const storedFavorites = JSON.parse(localStorage.getItem('favorites')) || [];
+        setFavorites(storedFavorites);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchFavorites();
   }, [user, navigate]);
 
   // Handle removing a favorite
-  const handleRemoveFavorite = (index) => {
-    const updatedFavorites = favorites.filter((_, i) => i !== index);
-    setFavorites(updatedFavorites);
-    localStorage.setItem('favorites', JSON.stringify(updatedFavorites));
+  const handleRemoveFavorite = async (property, e) => {
+    e?.stopPropagation();
+    try {
+      // De-favorite via API
+      const data = await api.favorites.toggleFavorite(property, false);
+      setFavorites(data || []);
+      showToast('Property removed from favorites!', 'info');
+    } catch (error) {
+      console.error('Failed to remove favorite via API:', error);
+      // Fallback local deletion
+      const propertyId = property._id || property.id;
+      const updatedFavorites = favorites.filter(fav => (fav._id || fav.id) !== propertyId);
+      setFavorites(updatedFavorites);
+      localStorage.setItem('favorites', JSON.stringify(updatedFavorites));
+      showToast('Property removed from favorites (offline).', 'info');
+    }
   };
 
-  // Handle logout
-  const handleLogout = () => {
-    logout();
-    navigate('/');
-  };
-
-  // Handle navigation to profile history
-  const handleGoToHistory = () => {
-    navigate('/profile#bookingHistory');
+  // Handle booking navigation
+  const handleBooking = (property, e) => {
+    e?.stopPropagation();
+    localStorage.setItem('selectedProperty', JSON.stringify(property));
+    navigate('/booking');
   };
 
   if (!user) {
-    return null; // Will redirect in useEffect
-  }
-
-  if (loading) {
-    return (
-      <>
-        <Header />
-        <div style={{ textAlign: 'center', padding: '60px 20px' }}>
-          <i className="fas fa-spinner fa-spin" style={{ fontSize: '2rem', color: 'var(--primary-color)' }}></i>
-          <p style={{ marginTop: '20px', fontSize: '1.1rem' }}>Loading your favorites...</p>
-        </div>
-        <Footer />
-      </>
-    );
+    return null;
   }
 
   return (
-    <>
+    <PageTransition>
       <Header />
       
-      <div style={{ padding: '20px', background: '#f8f9fa', minHeight: 'calc(100vh - 200px)' }}>
-        <h1 style={{ 
-          marginTop: '30px', 
-          textAlign: 'center', 
-          color: '#333',
-          fontSize: '2.5rem',
-          fontWeight: '600'
+      <main style={{ background: '#09090b', minHeight: '95vh', paddingBottom: '60px', position: 'relative' }}>
+        <div className="grid-bg"></div>
+
+        <section className="page-hero" style={{
+          padding: '50px 20px',
+          textAlign: 'center',
+          color: 'var(--light-text)',
+          background: 'radial-gradient(circle at center, #1b1b2f, #09090b)',
+          borderBottom: '1px solid rgba(255,255,255,0.06)'
         }}>
-          Your Favorite Properties
-        </h1>
+          <h1 className="neon-text" style={{ fontSize: '3rem', fontWeight: '700' }}>Your Favorites</h1>
+        </section>
         
-        <div className="favorites-container" style={{
-          maxWidth: '1200px',
-          margin: '30px auto',
-          display: 'flex',
-          flexWrap: 'wrap',
-          gap: '30px',
-          justifyContent: 'center'
-        }}>
-          {favorites.length === 0 ? (
-            <div style={{
-              textAlign: 'center',
-              padding: '60px 20px',
-              background: 'white',
-              borderRadius: '12px',
-              boxShadow: '0 4px 16px rgba(0,0,0,0.08)',
-              maxWidth: '500px',
-              margin: '0 auto'
-            }}>
-              <i className="fas fa-heart" style={{
-                fontSize: '4rem',
-                color: '#d90429',
-                marginBottom: '20px',
-                opacity: '0.6'
-              }}></i>
-              <h2 style={{ color: '#666', marginBottom: '10px' }}>No Favorites Yet</h2>
-              <p style={{ color: '#888', fontSize: '1.1rem', marginBottom: '20px' }}>
-                Start exploring properties and add them to your favorites!
-              </p>
-              <button 
-                onClick={() => navigate('/')}
-                style={{
-                  padding: '12px 24px',
-                  background: 'var(--primary-color)',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '6px',
-                  fontSize: '1rem',
-                  cursor: 'pointer',
-                  transition: 'background-color 0.3s'
-                }}
-                onMouseOver={(e) => e.target.style.backgroundColor = '#a1031d'}
-                onMouseOut={(e) => e.target.style.backgroundColor = 'var(--primary-color)'}
-              >
-                Browse Properties
-              </button>
-            </div>
-          ) : (
-            favorites.map((property, index) => (
-              <div key={index} className="property-card" style={{
-                background: 'white',
-                borderRadius: '8px',
-                boxShadow: '0 4px 15px rgba(0,0,0,0.08)',
-                width: '340px',
-                overflow: 'hidden',
-                position: 'relative',
-                transition: 'transform 0.3s ease, box-shadow 0.3s ease'
-              }}
-              onMouseOver={(e) => {
-                e.currentTarget.style.transform = 'translateY(-5px)';
-                e.currentTarget.style.boxShadow = '0 8px 25px rgba(0,0,0,0.15)';
-              }}
-              onMouseOut={(e) => {
-                e.currentTarget.style.transform = 'translateY(0)';
-                e.currentTarget.style.boxShadow = '0 4px 15px rgba(0,0,0,0.08)';
-              }}>
-                <img 
-                  src={property.imgSrc} 
-                  alt={property.imgAlt}
-                  style={{
-                    width: '100%',
-                    height: '220px',
-                    objectFit: 'cover'
-                  }}
-                />
-                <button 
-                  className="remove-fav"
-                  onClick={() => handleRemoveFavorite(index)}
-                  title="Remove from favorites"
-                  style={{
-                    position: 'absolute',
-                    top: '12px',
-                    right: '12px',
-                    background: '#d90429',
-                    border: 'none',
-                    color: 'white',
-                    fontSize: '1.2rem',
-                    borderRadius: '50%',
-                    width: '30px',
-                    height: '30px',
-                    cursor: 'pointer',
-                    boxShadow: '0 2px 5px rgba(0,0,0,0.3)',
-                    transition: 'background-color 0.3s ease',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center'
-                  }}
-                  onMouseOver={(e) => e.target.style.backgroundColor = '#a1031d'}
-                  onMouseOut={(e) => e.target.style.backgroundColor = '#d90429'}
-                >
-                  ×
-                </button>
-                
-                <div className="card-content" style={{ padding: '20px' }}>
-                  <div className="card-specs" style={{
-                    display: 'flex',
-                    gap: '20px',
-                    paddingBottom: '15px',
-                    marginBottom: '15px',
-                    borderBottom: '1px solid #eee',
-                    color: '#666',
-                    fontSize: '0.9rem'
-                  }}>
-                    <span>
-                      <i className="fas fa-bed" style={{ marginRight: '5px', color: '#2b2d42' }}></i>
-                      {property.beds}
-                    </span>
-                    <span>
-                      <i className="fas fa-bath" style={{ marginRight: '5px', color: '#2b2d42' }}></i>
-                      {property.baths}
-                    </span>
-                    <span>
-                      <i className="fas fa-ruler-combined" style={{ marginRight: '5px', color: '#2b2d42' }}></i>
-                      {property.sqft}
-                    </span>
-                  </div>
-                  
-                  <div className="card-footer">
-                    <h3 style={{
-                      fontSize: '1.25rem',
-                      marginBottom: '5px',
-                      color: '#333',
-                      fontWeight: '600'
-                    }}>
-                      {property.title}
-                    </h3>
-                    <p className="price" style={{
-                      fontSize: '1.2rem',
-                      fontWeight: '600',
-                      color: '#d90429',
-                      margin: '0'
-                    }}>
-                      {property.price}
-                    </p>
-                  </div>
-                </div>
+        <section style={{ padding: '40px 0' }}>
+          <div className="container" style={{ maxWidth: '1200px', margin: '0 auto' }}>
+            
+            {loading ? (
+              <div style={{ textAlign: 'center', padding: '60px 20px', color: '#a1a1aa' }}>
+                <i className="fas fa-spinner fa-spin" style={{ fontSize: '2.5rem', color: 'var(--primary-color)', marginBottom: '15px' }}></i>
+                <p>Loading your favorite properties...</p>
               </div>
-            ))
-          )}
-        </div>
-      </div>
+            ) : favorites.length === 0 ? (
+              <div className="glass-panel" style={{
+                textAlign: 'center',
+                padding: '60px 20px',
+                border: '1px solid rgba(255,255,255,0.08)',
+                maxWidth: '500px',
+                margin: '0 auto'
+              }}>
+                <i className="fas fa-heart-broken" style={{
+                  fontSize: '4rem',
+                  color: '#ef4444',
+                  marginBottom: '20px',
+                  opacity: '0.6'
+                }}></i>
+                <h2 style={{ color: '#fff', marginBottom: '10px', fontSize: '1.5rem', fontWeight: '600' }}>No Favorites Yet</h2>
+                <p style={{ color: '#a1a1aa', fontSize: '0.95rem', marginBottom: '25px', lineHeight: '1.6' }}>
+                  Start exploring Punjab's premier rental listings and save your absolute favorites here.
+                </p>
+                <button 
+                  onClick={() => navigate('/listings')}
+                  className="glow-btn"
+                  style={{
+                    padding: '12px 28px',
+                    border: 'none',
+                    borderRadius: '8px',
+                    fontSize: '1rem',
+                    fontWeight: '600',
+                    cursor: 'pointer',
+                    background: 'var(--primary-gradient)',
+                    color: '#fff'
+                  }}
+                >
+                  Browse Listings
+                </button>
+              </div>
+            ) : (
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
+                gap: '30px',
+                justifyContent: 'center'
+              }}>
+                {favorites.map((property, index) => {
+                  const title = property.title || 'Punjab Property';
+                  const price = property.price || 'Contact for details';
+                  const beds = property.beds || '3 Beds';
+                  const baths = property.baths || '2 Baths';
+                  const sqft = property.sqft || '1,500 sqft';
+                  const address = property.address || property.location || '';
+                  const image = property.image || property.imgSrc || 'https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?q=80&w=2070&auto=format&fit=crop';
+                  
+                  return (
+                    <ThreeDTilt 
+                      key={property.id || property._id || index} 
+                      className="property-card glass-panel" 
+                      maxTilt={6} 
+                      scale={1.01} 
+                      style={{ border: '1px solid rgba(255,255,255,0.08)', position: 'relative' }}
+                    >
+                      <div style={{ position: 'relative' }}>
+                        <img 
+                          src={image} 
+                          alt={title}
+                          style={{
+                            width: '100%',
+                            height: '200px',
+                            objectFit: 'cover',
+                            display: 'block'
+                          }}
+                        />
+                        <button 
+                          onClick={(e) => handleRemoveFavorite(property, e)}
+                          title="Remove from favorites"
+                          style={{
+                            position: 'absolute',
+                            top: '12px',
+                            right: '12px',
+                            background: 'rgba(239, 68, 68, 0.9)',
+                            border: 'none',
+                            color: 'white',
+                            fontSize: '1rem',
+                            borderRadius: '50%',
+                            width: '32px',
+                            height: '32px',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            zIndex: 3
+                          }}
+                        >
+                          <i className="fas fa-trash-alt"></i>
+                        </button>
+                      </div>
+                      
+                      <div style={{ padding: '20px' }}>
+                        <div style={{
+                          display: 'flex',
+                          gap: '15px',
+                          color: '#a1a1aa',
+                          fontSize: '0.8rem',
+                          marginBottom: '12px',
+                          borderBottom: '1px solid rgba(255,255,255,0.06)',
+                          paddingBottom: '10px'
+                        }}>
+                          <span><i className="fas fa-bed"></i> {beds}</span>
+                          <span><i className="fas fa-bath"></i> {baths}</span>
+                          <span><i className="fas fa-ruler"></i> {sqft}</span>
+                        </div>
+                        
+                        <h3 style={{
+                          fontSize: '1.2rem',
+                          marginBottom: '5px',
+                          color: '#fff',
+                          fontWeight: '600'
+                        }}>
+                          {title}
+                        </h3>
+                        {address && (
+                          <p style={{ color: '#71717a', fontSize: '0.8rem', marginBottom: '10px' }}>
+                            <i className="fas fa-map-marker-alt" style={{ marginRight: '5px', color: 'var(--primary-color)' }}></i>
+                            {address}
+                          </p>
+                        )}
+                        <p style={{
+                          fontSize: '1.15rem',
+                          fontWeight: '600',
+                          color: 'var(--primary-color)',
+                          marginBottom: '15px'
+                        }}>
+                          {price}
+                        </p>
+
+                        <button 
+                          onClick={(e) => handleBooking(property, e)}
+                          className="glow-btn"
+                          style={{
+                            width: '100%',
+                            padding: '10px',
+                            background: 'var(--primary-gradient)',
+                            color: '#fff',
+                            border: 'none',
+                            borderRadius: '6px',
+                            fontWeight: '600',
+                            fontSize: '0.85rem',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          Book Inquiry
+                        </button>
+                      </div>
+                    </ThreeDTilt>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </section>
+      </main>
 
       <Footer />
-
-      <style jsx>{`
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        :root {
-          --primary-color: #d90429;
-          --primary-gradient: linear-gradient(45deg, #d90429, #ef233c);
-          --dark-bg: #2b2d42;
-          --light-text: #edf2f4;
-          --dark-text: #333;
-          --secondary-bg: #f8f9fa;
-        }
-        
-        body {
-          font-family: 'Poppins', sans-serif;
-          margin: 0;
-          padding: 0;
-          background: #f8f9fa;
-          color: #333;
-        }
-
-        .favorites-container {
-          max-width: 1200px;
-          margin: 30px auto;
-          display: flex;
-          flex-wrap: wrap;
-          gap: 30px;
-          justify-content: center;
-        }
-
-        .property-card {
-          background: white;
-          border-radius: 8px;
-          box-shadow: 0 4px 15px rgba(0,0,0,0.08);
-          width: 340px;
-          overflow: hidden;
-          position: relative;
-          transition: transform 0.3s ease, box-shadow 0.3s ease;
-        }
-
-        .property-card:hover {
-          transform: translateY(-5px);
-          box-shadow: 0 8px 25px rgba(0,0,0,0.15);
-        }
-
-        .property-card img {
-          width: 100%;
-          height: 220px;
-          object-fit: cover;
-        }
-
-        .card-content {
-          padding: 20px;
-        }
-
-        .card-specs {
-          display: flex;
-          gap: 20px;
-          padding-bottom: 15px;
-          margin-bottom: 15px;
-          border-bottom: 1px solid #eee;
-          color: #666;
-          font-size: 0.9rem;
-        }
-
-        .card-specs i {
-          margin-right: 5px;
-          color: #2b2d42;
-        }
-
-        .card-footer h3 {
-          font-size: 1.25rem;
-          margin-bottom: 5px;
-          color: #333;
-          font-weight: 600;
-        }
-
-        .card-footer .price {
-          font-size: 1.2rem;
-          font-weight: 600;
-          color: #d90429;
-          margin: 0;
-        }
-
-        .remove-fav {
-          position: absolute;
-          top: 12px;
-          right: 12px;
-          background: #d90429;
-          border: none;
-          color: white;
-          font-size: 1.2rem;
-          border-radius: 50%;
-          width: 30px;
-          height: 30px;
-          cursor: pointer;
-          box-shadow: 0 2px 5px rgba(0,0,0,0.3);
-          transition: background-color 0.3s ease;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-        }
-
-        .remove-fav:hover {
-          background-color: #a1031d;
-        }
-
-        /* Responsive Design */
-        @media (max-width: 768px) {
-          .favorites-container {
-            gap: 20px;
-            padding: 0 10px;
-          }
-          
-          .property-card {
-            width: 100%;
-            max-width: 400px;
-          }
-          
-          h1 {
-            font-size: 2rem !important;
-            margin-top: 20px !important;
-          }
-        }
-
-        @media (max-width: 480px) {
-          .favorites-container {
-            gap: 15px;
-            padding: 0 5px;
-          }
-          
-          h1 {
-            font-size: 1.8rem !important;
-          }
-          
-          .card-specs {
-            gap: 15px;
-            font-size: 0.8rem;
-          }
-        }
-      `}</style>
-    </>
+    </PageTransition>
   );
 }
