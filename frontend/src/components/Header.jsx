@@ -119,8 +119,12 @@ export default function Header() {
                           <strong id="profileName" style={{ color: '#fff' }}>{user.username || 'Account'}</strong>
                           <small id="profileEmail" style={{ display: 'block', color: 'rgba(255,255,255,0.6)', fontSize: '0.75rem', marginTop: '3px' }}>{user.email || ''}</small>
                         </div>
-                        <Link to="/profile" className={isActive('/profile') ? 'active' : ''}>Profile</Link>
+                        <Link to="/profile" className={isActive('/profile') ? 'active' : ''}><i className="fas fa-user-circle" style={{ marginRight: 8 }}></i> Profile</Link>
                         <Link to="/favorites" className={isActive('/favorites') ? 'active' : ''}><i className="fas fa-heart" style={{ marginRight: 8 }}></i> Favorites</Link>
+                        {user.role === 'landlord' && (
+                          <Link to="/landlord" className={isActive('/landlord') ? 'active' : ''}><i className="fas fa-tasks" style={{ marginRight: 8 }}></i> Landlord Center</Link>
+                        )}
+                        <Link to="/settings" className={isActive('/settings') ? 'active' : ''}><i className="fas fa-cog" style={{ marginRight: 8 }}></i> Settings</Link>
                         <a href="#" className="signout-btn" onClick={logout} style={{ color: '#ef4444' }}><i className="fas fa-sign-out-alt" style={{ marginRight: 8 }}></i> Sign Out</a>
                       </div>
                     )}

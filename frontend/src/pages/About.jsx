@@ -7,10 +7,10 @@ import { motion } from 'framer-motion';
 
 export default function About() {
   const team = [
-    { name: 'Mannat Dhiman', role: 'Lead Property Agent', initials: 'MD' },
-    { name: 'Manprabhnoor Kaur', role: 'Marketing Director', initials: 'MK' },
-    { name: 'Manpreet Singh', role: 'Client Relations', initials: 'MS' },
-    { name: 'Manraj Singh', role: 'Lead Developer', initials: 'MR' }
+    { name: 'John Doe', role: 'Lead Property Agent', initials: 'JD' },
+    { name: 'Michael Peterson', role: 'Marketing Director', initials: 'MP' },
+    { name: 'Andrew Jackson', role: 'Client Relations', initials: 'AJ' },
+    { name: 'Mitchell Head', role: 'Lead Developer', initials: 'MH' }
   ];
 
   const values = [

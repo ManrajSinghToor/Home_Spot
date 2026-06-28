@@ -1,7 +1,13 @@
-// Unified API service layer for HomeSpot
-// Set USE_MOCK = true to run the frontend entirely client-side (using localStorage as a mock database)
-// Set USE_MOCK = false to route requests to the backend server
-const USE_MOCK = true;
+const USE_MOCK = false;
+
+// Helper to get auth headers with Bearer token
+const getAuthHeaders = () => {
+  const token = localStorage.getItem('token');
+  return {
+    'Content-Type': 'application/json',
+    ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+  };
+};
 
 // Helper to simulate network latency
 const delay = (ms = 300) => new Promise(resolve => setTimeout(resolve, ms));
@@ -283,98 +289,94 @@ const getMockDatabase = () => {
 export const api = {
   // Authentication
   auth: {
-    login: async (username, password) => {
-      await delay(400);
-      if (!USE_MOCK) {
-        const response = await fetch('/api/auth/login', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ username, password })
-        });
-        const data = await response.json();
-        if (!response.ok || !data.success) throw new Error(data.message || 'Login failed.');
-        return data;
-      } else {
-        const { users } = getMockDatabase();
-        const found = users.find(u => u.username.toLowerCase() === username.toLowerCase());
-        if (!found || found.password !== password) {
-          throw new Error('Invalid username or password.');
-        }
-        return {
-          success: true,
-          user: { username: found.username, email: found.email, role: found.role }
-        };
+    login: async (username, password, role) => {
+      await delay(200);
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password, role })
+      });
+      const data = await response.json();
+      if (!response.ok || !data.success) throw new Error(data.message || 'Login failed.');
+      if (data.token) {
+        localStorage.setItem('token', data.token);
       }
+      return data;
     },
 
     signup: async (userData) => {
-      await delay(500);
-      if (!USE_MOCK) {
-        const response = await fetch('/api/auth/signup', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(userData)
-        });
-        const data = await response.json();
-        if (!response.ok || !data.success) throw new Error(data.message || 'Signup failed.');
-        return data;
-      } else {
-        const { users } = getMockDatabase();
-        
-        // Check duplication
-        if (users.some(u => u.username.toLowerCase() === userData.username.toLowerCase())) {
-          throw new Error('Username is already taken.');
-        }
-        if (users.some(u => u.email.toLowerCase() === userData.email.toLowerCase())) {
-          throw new Error('Email is already registered.');
-        }
-
-        const newUser = {
-          id: Date.now(),
-          username: userData.username,
-          email: userData.email,
-          password: userData.password, // Stored in plain text for frontend mock
-          role: userData.role || 'user'
-        };
-
-        users.push(newUser);
-        localStorage.setItem('users_db', JSON.stringify(users));
-
-        return {
-          success: true,
-          user: { username: newUser.username, email: newUser.email, role: newUser.role }
-        };
+      await delay(200);
+      const response = await fetch('/api/auth/signup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(userData)
+      });
+      const data = await response.json();
+      if (!response.ok || !data.success) throw new Error(data.message || 'Signup failed.');
+      if (data.token) {
+        localStorage.setItem('token', data.token);
       }
+      return data;
+    },
+
+    updateProfile: async (username) => {
+      await delay(200);
+      const response = await fetch('/api/auth/update-profile', {
+        method: 'PUT',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({ username })
+      });
+      const data = await response.json();
+      if (!response.ok || !data.success) throw new Error(data.message || 'Profile update failed.');
+      if (data.token) {
+        localStorage.setItem('token', data.token);
+      }
+      return data;
+    },
+
+    changePassword: async (currentPassword, newPassword) => {
+      await delay(200);
+      const response = await fetch('/api/auth/change-password', {
+        method: 'PUT',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({ currentPassword, newPassword })
+      });
+      const data = await response.json();
+      if (!response.ok || !data.success) throw new Error(data.message || 'Password update failed.');
+      return data;
     }
   },
 
   // Properties Listings
   properties: {
     getListings: async () => {
-      await delay(300);
-      const { landlordProps } = getMockDatabase();
-      const allMerged = [...INITIAL_PROPERTIES, ...landlordProps];
-      return allMerged.map(normalizeProperty);
+      await delay(200);
+      const response = await fetch('/api/properties');
+      const data = await response.json();
+      if (!response.ok || !data.success) throw new Error(data.message || 'Failed to fetch properties.');
+      return data.properties.map(normalizeProperty);
     },
 
     createListing: async (listingData) => {
-      await delay(400);
-      const { landlordProps } = getMockDatabase();
-      const newProp = {
-        id: Date.now(),
-        ...listingData,
-        image: listingData.image || 'https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?q=80&w=2070&auto=format&fit=crop'
-      };
-      landlordProps.push(newProp);
-      localStorage.setItem('landlordProperties', JSON.stringify(landlordProps));
-      return normalizeProperty(newProp);
+      await delay(200);
+      const response = await fetch('/api/properties', {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify(listingData)
+      });
+      const data = await response.json();
+      if (!response.ok || !data.success) throw new Error(data.message || 'Failed to create listing.');
+      return normalizeProperty(data.property);
     },
 
     deleteListing: async (id) => {
-      await delay(300);
-      const { landlordProps } = getMockDatabase();
-      const filtered = landlordProps.filter(p => p.id !== id && String(p.id) !== String(id));
-      localStorage.setItem('landlordProperties', JSON.stringify(filtered));
+      await delay(200);
+      const response = await fetch(`/api/properties/${id}`, {
+        method: 'DELETE',
+        headers: getAuthHeaders()
+      });
+      const data = await response.json();
+      if (!response.ok || !data.success) throw new Error(data.message || 'Failed to delete listing.');
       return { success: true };
     }
   },
@@ -382,22 +384,34 @@ export const api = {
   // Bookings
   bookings: {
     createBooking: async (bookingData) => {
-      await delay(500);
-      const { bookings } = getMockDatabase();
-      const newBooking = {
-        id: Date.now(),
-        ...bookingData,
-        bookedAt: new Date().toISOString()
-      };
-      bookings.push(newBooking);
-      localStorage.setItem('bookingHistory', JSON.stringify(bookings));
-      return newBooking;
+      await delay(200);
+      const propertyId = bookingData.propertyId || bookingData.property?._id || bookingData.property?.id;
+      const response = await fetch('/api/bookings', {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({
+          propertyId,
+          name: bookingData.name,
+          email: bookingData.email,
+          phone: bookingData.phone,
+          moveInDate: bookingData.moveInDate || bookingData.date,
+          duration: bookingData.duration,
+          message: bookingData.message
+        })
+      });
+      const data = await response.json();
+      if (!response.ok || !data.success) throw new Error(data.message || 'Failed to submit booking inquiry.');
+      return data.booking;
     },
 
     getBookings: async (username) => {
-      await delay(300);
-      const { bookings } = getMockDatabase();
-      return bookings.filter(b => b.username === username);
+      await delay(200);
+      const response = await fetch('/api/bookings', {
+        headers: getAuthHeaders()
+      });
+      const data = await response.json();
+      if (!response.ok || !data.success) throw new Error(data.message || 'Failed to fetch bookings.');
+      return data.bookings;
     }
   },
 
@@ -405,25 +419,25 @@ export const api = {
   favorites: {
     getFavorites: async () => {
       await delay(200);
-      const { favorites } = getMockDatabase();
-      return favorites.map(normalizeProperty);
+      const response = await fetch('/api/favorites', {
+        headers: getAuthHeaders()
+      });
+      const data = await response.json();
+      if (!response.ok || !data.success) throw new Error(data.message || 'Failed to fetch favorites.');
+      return data.favorites.map(normalizeProperty);
     },
 
     toggleFavorite: async (property, isFavorited) => {
       await delay(100);
-      const { favorites } = getMockDatabase();
-      let updated;
-      if (isFavorited) {
-        // Add if not exist
-        if (!favorites.some(fav => fav.address === property.address || fav.dataAddress === property.dataAddress)) {
-          favorites.push(normalizeProperty(property));
-        }
-        updated = favorites;
-      } else {
-        updated = favorites.filter(fav => fav.address !== property.address && fav.dataAddress !== property.dataAddress);
-      }
-      localStorage.setItem('favorites', JSON.stringify(updated));
-      return updated.map(normalizeProperty);
+      const propertyId = property._id || property.id;
+      const response = await fetch('/api/favorites/toggle', {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({ propertyId, isFavorited })
+      });
+      const data = await response.json();
+      if (!response.ok || !data.success) throw new Error(data.message || 'Failed to toggle favorite.');
+      return data.favorites.map(normalizeProperty);
     }
   }
 };

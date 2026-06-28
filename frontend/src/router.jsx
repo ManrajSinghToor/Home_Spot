@@ -14,6 +14,7 @@ import Landlord from './pages/Landlord';
 import VirtualTour from './pages/VirtualTour';
 import Compare from './pages/Compare';
 import Blog from './pages/Blog';
+import Settings from './pages/Settings';
 import ErrorBoundary from './components/ErrorBoundary';
 
 export default function Router() {
@@ -35,6 +36,7 @@ export default function Router() {
           <Route path="/virtual-tour" element={<VirtualTour />} />
           <Route path="/compare" element={<Compare />} />
           <Route path="/blog" element={<Blog />} />
+          <Route path="/settings" element={<Settings />} />
         </Routes>
       </BrowserRouter>
     </ErrorBoundary>

@@ -43,8 +43,7 @@ export default function Login() {
   // Redirect if already logged in
   useEffect(() => {
     if (user) {
-      const role = user.role || 'user';
-      navigate(role === 'landlord' ? '/landlord' : '/');
+      navigate('/');
     }
   }, [user, navigate]);
 
@@ -131,7 +130,7 @@ export default function Login() {
       login(currentUser);
       setLoading(false);
       showToast('Registration successful! Welcome to HomeSpot.', 'success');
-      navigate(currentUser.role === 'landlord' ? '/landlord' : '/');
+      navigate('/');
     } catch (error) {
       console.error('Signup error:', error);
       const msg = error.message || '';
@@ -173,7 +172,7 @@ export default function Login() {
     }
 
     try {
-      const data = await api.auth.login(loginData.username.trim(), loginData.password);
+      const data = await api.auth.login(loginData.username.trim(), loginData.password, loginData.role);
 
       const currentUser = {
         username: data.user.username,
@@ -184,7 +183,7 @@ export default function Login() {
       login(currentUser);
       setLoading(false);
       showToast(`Welcome back, ${currentUser.username}!`, 'success');
-      navigate(currentUser.role === 'landlord' ? '/landlord' : '/');
+      navigate('/');
     } catch (error) {
       console.error('Login error:', error);
       const msg = error.message || '';

@@ -1,0 +1,25 @@
+{
+  "name": "homespot-backend",
+  "version": "1.0.0",
+  "description": "Backend API for HomeSpot 3D rental platform",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "nodemon server.js"
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "cors": "^2.8.6",
+    "dotenv": "^16.6.1",
+    "express": "^4.22.2",
+    "framer-motion": "^12.42.0",
+    "jsonwebtoken": "^9.0.2",
+    "mongoose": "^8.24.1",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7",
+    "react-router-dom": "^7.18.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.4"
+  }
+}
