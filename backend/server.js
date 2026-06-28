@@ -10,7 +10,10 @@ dotenv.config();
 const app = express();
 
 // Middlewares
-app.use(cors());
+app.use(cors({
+    origin: "https://home-spot-nu.vercel.app",
+    credentials: true
+}));
 app.use(express.json());
 
 // Import Models for database seeding
