@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
 import PageTransition from '../components/PageTransition';
+import { api } from '../services/api';
 
 // Static default properties if user hasn't selected any in comparison
 const DEFAULT_COMPARE_PROPS = [
@@ -38,8 +39,21 @@ const DEFAULT_COMPARE_PROPS = [
 
 export default function Compare() {
   const [properties, setProperties] = useState([]);
+  const [allAvailableProperties, setAllAvailableProperties] = useState([]);
+  const [isUsingDefaults, setIsUsingDefaults] = useState(false);
 
   useEffect(() => {
+    // Load all properties from API for comparison selection dropdown
+    async function loadAllProperties() {
+      try {
+        const list = await api.properties.getListings();
+        setAllAvailableProperties(list);
+      } catch (error) {
+        console.error('Error loading properties for comparison:', error);
+      }
+    }
+    loadAllProperties();
+
     // Load properties from comparison drawer
     const list = JSON.parse(localStorage.getItem('comparisonProperties') || '[]');
     if (list.length > 0) {
@@ -57,13 +71,55 @@ export default function Compare() {
         }
       }));
       setProperties(hydrated);
+      setIsUsingDefaults(false);
     } else {
       setProperties(DEFAULT_COMPARE_PROPS);
+      setIsUsingDefaults(true);
     }
   }, []);
 
   const handleRemove = (id) => {
     const updated = properties.filter(p => p.id !== id);
+    setProperties(updated);
+    localStorage.setItem('comparisonProperties', JSON.stringify(updated));
+    if (updated.length === 0) {
+      setIsUsingDefaults(false); // If they manually removed everything, do not toggle default properties back on immediately
+    }
+  };
+
+  const handleSelectPropertyToAdd = (e) => {
+    const selectedId = e.target.value;
+    if (!selectedId) return;
+
+    const propertyToAdd = allAvailableProperties.find(ap => ap.id === selectedId);
+    if (!propertyToAdd) return;
+
+    let baseProperties = properties;
+    if (isUsingDefaults) {
+      baseProperties = [];
+      setIsUsingDefaults(false);
+    }
+
+    if (baseProperties.length >= 3) {
+      alert('You can compare a maximum of 3 properties. Please remove one first.');
+      return;
+    }
+
+    const idx = baseProperties.length;
+    const hydrated = {
+      ...propertyToAdd,
+      city: propertyToAdd.city || 'Punjab',
+      priceVal: parseInt((propertyToAdd.price || '').replace(/[^\d]/g, '')) || 30000,
+      scores: propertyToAdd.scores || {
+        safety: 70 + (idx * 10) % 25,
+        transit: 65 + (idx * 15) % 30,
+        budget: Math.max(30, 100 - (parseInt((propertyToAdd.price || '').replace(/[^\d]/g, '')) || 30000) / 1000),
+        size: Math.min(98, (parseInt((propertyToAdd.sqft || '').replace(/[^\d]/g, '')) || 1500) / 45),
+        landscape: 60 + (idx * 20) % 35
+      }
+    };
+
+    const updated = [...baseProperties, hydrated];
     setProperties(updated);
     localStorage.setItem('comparisonProperties', JSON.stringify(updated));
   };
@@ -107,6 +163,58 @@ export default function Compare() {
               Compare pricing, specifications, and neighborhood ratings side-by-side to make the optimal decision.
             </p>
           </motion.div>
+
+          {/* Property selector dropdown */}
+          <div className="glass-panel" style={{ 
+            padding: '20px', 
+            marginBottom: '40px', 
+            display: 'flex', 
+            alignItems: 'center', 
+            justifyContent: 'center', 
+            gap: '15px', 
+            flexWrap: 'wrap',
+            background: 'rgba(255, 255, 255, 0.03)',
+            border: '1px solid rgba(255, 255, 255, 0.08)',
+            borderRadius: '12px'
+          }}>
+            <span style={{ color: '#e4e4e7', fontWeight: '500', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <i className="fas fa-balance-scale" style={{ color: 'var(--primary-color)' }}></i>
+              Compare different properties:
+            </span>
+            <select 
+              onChange={handleSelectPropertyToAdd} 
+              value=""
+              style={{
+                padding: '12px 20px',
+                background: 'rgba(9, 9, 11, 0.8)',
+                border: '1px solid rgba(255, 255, 255, 0.12)',
+                borderRadius: '8px',
+                color: '#fff',
+                cursor: 'pointer',
+                outline: 'none',
+                minWidth: '280px',
+                fontSize: '0.9rem',
+                boxShadow: '0 4px 12px rgba(0,0,0,0.5)',
+                transition: 'border-color 0.2s'
+              }}
+            >
+              <option value="" style={{ background: '#09090b', color: '#71717a' }}>
+                -- Add property to compare --
+              </option>
+              {allAvailableProperties
+                .filter(ap => !properties.some(p => p.id === ap.id))
+                .map(ap => (
+                  <option key={ap.id} value={ap.id} style={{ background: '#09090b', color: '#fff' }}>
+                    {ap.title} ({ap.city.toUpperCase()}) - {ap.price}
+                  </option>
+                ))}
+            </select>
+            {properties.length > 0 && isUsingDefaults && (
+              <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.8rem', fontStyle: 'italic' }}>
+                (Showing default comparison properties)
+              </span>
+            )}
+          </div>
 
           {properties.length === 0 ? (
             <div className="glass-panel" style={{ padding: '60px 40px', textAlign: 'center', maxWidth: '600px', margin: '0 auto' }}>

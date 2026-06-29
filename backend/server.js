@@ -11,7 +11,7 @@ const app = express();
 
 // Middlewares
 app.use(cors({
-    origin: "https://home-spot-nu.vercel.app",
+    origin: true,
     credentials: true
 }));
 app.use(express.json());

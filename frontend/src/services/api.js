@@ -1,5 +1,6 @@
 const USE_MOCK = false;
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5001";
+
+const API_BASE = '';
 
 // Helper to get auth headers with Bearer token
 const getAuthHeaders = () => {
@@ -261,7 +262,7 @@ export function normalizeProperty(p) {
   
   return {
     ...p,
-    id: p.id || addressVal,
+    id: p._id || p.id || addressVal,
     image: imgVal,
     imgSrc: imgVal,
     imgAlt: p.imgAlt || p.title || 'Property Image',
@@ -294,7 +295,7 @@ export const api = {
       await delay(200);
       let response;
       try {
-        response = await fetch(`${API_URL}/api/auth/login`, {
+        response = await fetch(`${API_BASE}/api/auth/login`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ username, password, role })
@@ -321,7 +322,7 @@ export const api = {
       await delay(200);
       let response;
       try {
-        response = await fetch(`${API_URL}/api/auth/signup`, {
+        response = await fetch(`${API_BASE}/api/auth/signup`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(userData)
@@ -346,7 +347,7 @@ export const api = {
 
     updateProfile: async (username) => {
       await delay(200);
-      const response = await fetch(`${API_URL}/api/auth/update-profile`, {
+      const response = await fetch(`${API_BASE}/api/auth/update-profile`, {
         method: 'PUT',
         headers: getAuthHeaders(),
         body: JSON.stringify({ username })
@@ -361,7 +362,7 @@ export const api = {
 
     changePassword: async (currentPassword, newPassword) => {
       await delay(200);
-      const response = await fetch(`${API_URL}/api/auth/change-password`, {
+      const response = await fetch(`${API_BASE}/api/auth/change-password`, {
         method: 'PUT',
         headers: getAuthHeaders(),
         body: JSON.stringify({ currentPassword, newPassword })
@@ -376,7 +377,7 @@ export const api = {
   properties: {
     getListings: async () => {
       await delay(200);
-      const response = await fetch(`${API_URL}/api/properties`);
+      const response = await fetch(`${API_BASE}/api/properties`);
       const data = await response.json();
       if (!response.ok || !data.success) throw new Error(data.message || 'Failed to fetch properties.');
       return data.properties.map(normalizeProperty);
@@ -384,7 +385,7 @@ export const api = {
 
     createListing: async (listingData) => {
       await delay(200);
-      const response = await fetch(`${API_URL}/api/properties`, {
+      const response = await fetch(`${API_BASE}/api/properties`, {
         method: 'POST',
         headers: getAuthHeaders(),
         body: JSON.stringify(listingData)
@@ -396,7 +397,7 @@ export const api = {
 
     deleteListing: async (id) => {
       await delay(200);
-      const response = await fetch(`${API_URL}/api/properties/${id}`, {
+      const response = await fetch(`${API_BASE}/api/properties/${id}`, {
         method: 'DELETE',
         headers: getAuthHeaders()
       });
@@ -411,7 +412,7 @@ export const api = {
     createBooking: async (bookingData) => {
       await delay(200);
       const propertyId = bookingData.propertyId || bookingData.property?._id || bookingData.property?.id;
-      const response = await fetch(`${API_URL}/api/bookings`, {
+      const response = await fetch(`${API_BASE}/api/bookings`, {
         method: 'POST',
         headers: getAuthHeaders(),
         body: JSON.stringify({
@@ -431,7 +432,7 @@ export const api = {
 
     getBookings: async (username) => {
       await delay(200);
-      const response = await fetch(`${API_URL}/api/bookings`, {
+      const response = await fetch(`${API_BASE}/api/bookings`, {
         headers: getAuthHeaders()
       });
       const data = await response.json();
@@ -444,7 +445,7 @@ export const api = {
   favorites: {
     getFavorites: async () => {
       await delay(200);
-      const response = await fetch(`${API_URL}/api/favorites`, {
+      const response = await fetch(`${API_BASE}/api/favorites`, {
         headers: getAuthHeaders()
       });
       const data = await response.json();
@@ -455,7 +456,7 @@ export const api = {
     toggleFavorite: async (property, isFavorited) => {
       await delay(100);
       const propertyId = property._id || property.id;
-      const response = await fetch(`${API_URL}/api/favorites/toggle`, {
+      const response = await fetch(`${API_BASE}/api/favorites/toggle`, {
         method: 'POST',
         headers: getAuthHeaders(),
         body: JSON.stringify({ propertyId, isFavorited })
