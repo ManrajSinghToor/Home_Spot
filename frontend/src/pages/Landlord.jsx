@@ -288,43 +288,35 @@ export default function Landlord() {
                       
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                         <label style={{ display: 'block', color: '#a1a1aa', fontSize: '0.85rem', fontWeight: '500' }}>Property Image *</label>
-                        <div style={{ display: 'flex', gap: '15px', alignItems: 'center' }}>
-                          <label 
-                            className="glow-btn" 
-                            style={{ 
-                              padding: '10px 15px', 
-                              borderRadius: '6px', 
-                              background: 'rgba(255,255,255,0.03)', 
-                              border: '1px dashed rgba(255,255,255,0.15)', 
-                              color: '#fff', 
-                              fontSize: '0.85rem', 
-                              cursor: 'pointer',
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              gap: '8px'
-                            }}
-                          >
-                            <i className="fas fa-cloud-upload-alt"></i> Choose from device
+                        
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                          <div>
+                            <span style={{ display: 'block', color: '#71717a', fontSize: '0.75rem', marginBottom: '4px' }}>Browse from device:</span>
                             <input 
                               type="file" 
                               accept="image/*" 
                               onChange={handleFileChange} 
-                              style={{ display: 'none' }} 
+                              className="glass-input" 
+                              style={{ width: '100%', cursor: 'pointer', padding: '8px 12px' }}
                             />
-                          </label>
-                          <span style={{ color: '#71717a', fontSize: '0.8rem' }}>- OR -</span>
-                          <input 
-                            type="text" 
-                            name="image" 
-                            placeholder="Paste image URL..." 
-                            value={newProperty.image.startsWith('data:') ? '' : newProperty.image} 
-                            onChange={handleInputChange} 
-                            className="glass-input" 
-                            style={{ flexGrow: 1, margin: 0 }} 
-                          />
+                          </div>
+
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                            <span style={{ color: '#71717a', fontSize: '0.75rem' }}>- OR -</span>
+                            <input 
+                              type="text" 
+                              name="image" 
+                              placeholder="Paste image URL here..." 
+                              value={newProperty.image.startsWith('data:') ? '' : newProperty.image} 
+                              onChange={handleInputChange} 
+                              className="glass-input" 
+                              style={{ flexGrow: 1, margin: 0 }} 
+                            />
+                          </div>
                         </div>
+
                         {newProperty.image && (
-                          <div style={{ position: 'relative', width: '100%', height: '140px', borderRadius: '8px', overflow: 'hidden', marginTop: '5px', border: '1px solid rgba(255,255,255,0.1)' }}>
+                          <div style={{ position: 'relative', width: '100%', height: '140px', borderRadius: '8px', overflow: 'hidden', marginTop: '10px', border: '1px solid rgba(255,255,255,0.1)' }}>
                             <img src={newProperty.image} alt="Preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                             <button
                               type="button"
