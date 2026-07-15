@@ -97,7 +97,9 @@ export default function Profile() {
           background: 'radial-gradient(circle at center, #1b1b2f, #09090b)',
           borderBottom: '1px solid rgba(255,255,255,0.06)'
         }}>
-          <h1 className="neon-text" style={{ fontSize: '3rem', fontWeight: '700' }}>Tenant Hub</h1>
+          <h1 className="neon-text" style={{ fontSize: '3rem', fontWeight: '700' }}>
+            {user.role === 'landlord' ? 'Landlord Hub' : 'Tenant Hub'}
+          </h1>
         </section>
 
         <section style={{ padding: '40px 0' }}>
@@ -248,7 +250,7 @@ export default function Profile() {
                                   <i className="far fa-comments"></i> Chat
                                 </button>
                                 
-                                {booking.status === 'approved' && booking.paymentStatus !== 'paid' && (
+                                {user.role !== 'landlord' && booking.status === 'approved' && booking.paymentStatus !== 'paid' && (
                                   <button
                                     onClick={() => navigate(`/payment?bookingId=${id}`)}
                                     className="glow-btn"
@@ -267,7 +269,7 @@ export default function Profile() {
                                   </button>
                                 )}
 
-                                {booking.status !== 'cancelled' && booking.status !== 'declined' && booking.paymentStatus !== 'paid' && (
+                                {user.role !== 'landlord' && booking.status !== 'cancelled' && booking.status !== 'declined' && booking.paymentStatus !== 'paid' && (
                                   <button
                                     onClick={() => handleCancelBooking(id)}
                                     className="glow-btn"

@@ -343,8 +343,11 @@ export default function Listings() {
     setSearchParams(newParams);
   };
 
-  // Handle booking
   const handleBooking = (property) => {
+    if (property.status === 'rented') {
+      showToast('This property has already been sold out!', 'error');
+      return;
+    }
     addToRecentlyViewed(property);
     localStorage.setItem('selectedProperty', JSON.stringify(property));
     navigate('/booking');
@@ -580,6 +583,25 @@ export default function Listings() {
                             alt={property.title}
                             style={{ width: '100%', height: '180px', objectFit: 'cover', display: 'block' }}
                           />
+                          {property.status === 'rented' && (
+                            <div style={{
+                              position: 'absolute',
+                              top: '15px',
+                              left: '15px',
+                              background: 'rgba(239, 68, 68, 0.95)',
+                              color: '#fff',
+                              padding: '5px 12px',
+                              borderRadius: '6px',
+                              fontSize: '0.75rem',
+                              fontWeight: '700',
+                              letterSpacing: '1.2px',
+                              textTransform: 'uppercase',
+                              boxShadow: '0 0 15px rgba(239, 68, 68, 0.65)',
+                              zIndex: 5
+                            }}>
+                              SOLD OUT
+                            </div>
+                          )}
                           
                           {/* Actions overlay */}
                           <div style={{ position: 'absolute', top: '10px', right: '10px', display: 'flex', gap: '8px', zIndex: 3 }} onClick={e => e.stopPropagation()}>
@@ -630,13 +652,23 @@ export default function Listings() {
                         <h3 style={{ fontSize: '1.15rem', color: '#fff', marginBottom: '5px', fontWeight: '600' }}>{property.title}</h3>
                         <p style={{ color: 'var(--primary-color)', fontWeight: '600', fontSize: '1.1rem', marginBottom: '15px' }}>{property.price}</p>
                         
-                        <button 
-                          onClick={(e) => { e.stopPropagation(); handleBooking(property); }}
-                          className="glow-btn"
-                          style={{ width: '100%', padding: '10px', background: 'var(--primary-gradient)', color: '#fff', border: 'none', borderRadius: '6px', fontWeight: '600', fontSize: '0.85rem', cursor: 'pointer' }}
-                        >
-                          Book Now
-                        </button>
+                        {property.status === 'rented' ? (
+                          <button 
+                            disabled
+                            className="glow-btn"
+                            style={{ width: '100%', padding: '10px', background: '#27272a', color: '#71717a', border: 'none', borderRadius: '6px', fontWeight: '600', fontSize: '0.85rem', cursor: 'not-allowed', boxShadow: 'none' }}
+                          >
+                            Sold / Rented
+                          </button>
+                        ) : (
+                          <button 
+                            onClick={(e) => { e.stopPropagation(); handleBooking(property); }}
+                            className="glow-btn"
+                            style={{ width: '100%', padding: '10px', background: 'var(--primary-gradient)', color: '#fff', border: 'none', borderRadius: '6px', fontWeight: '600', fontSize: '0.85rem', cursor: 'pointer' }}
+                          >
+                            Book Now
+                          </button>
+                        )}
                       </div>
                     </ThreeDTilt>
                   );
@@ -714,7 +746,11 @@ export default function Listings() {
                 <h3 style={{ fontSize: '1.8rem', color: 'var(--primary-color)', fontWeight: '600', marginBottom: '30px' }}>{selectedProperty.price}</h3>
                 
                 <div style={{ display: 'flex', gap: '15px' }}>
-                  <button onClick={() => handleBooking(selectedProperty)} className="glow-btn" style={{ flex: 1, padding: '12px', background: 'var(--primary-gradient)', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '1rem', fontWeight: '600', cursor: 'pointer' }}>Book Now</button>
+                  {selectedProperty.status === 'rented' ? (
+                    <button disabled className="glow-btn" style={{ flex: 1, padding: '12px', background: '#27272a', color: '#71717a', border: 'none', borderRadius: '8px', fontSize: '1rem', fontWeight: '600', cursor: 'not-allowed', boxShadow: 'none' }}>Sold / Rented</button>
+                  ) : (
+                    <button onClick={() => handleBooking(selectedProperty)} className="glow-btn" style={{ flex: 1, padding: '12px', background: 'var(--primary-gradient)', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '1rem', fontWeight: '600', cursor: 'pointer' }}>Book Now</button>
+                  )}
                   {(() => {
                     const isFav = userFavorites.some(fav => (fav._id || fav.id) === (selectedProperty._id || selectedProperty.id));
                     return (

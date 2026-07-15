@@ -30,7 +30,13 @@ export default function Booking() {
 
     const selectedProperty = localStorage.getItem('selectedProperty');
     if (selectedProperty) {
-      setProperty(JSON.parse(selectedProperty));
+      const parsed = JSON.parse(selectedProperty);
+      if (parsed.status === 'rented') {
+        showToast('This property has already been sold out!', 'error');
+        navigate('/listings');
+        return;
+      }
+      setProperty(parsed);
     } else {
       navigate('/listings');
     }

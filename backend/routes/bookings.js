@@ -49,6 +49,10 @@ router.post('/', protect, async (req, res) => {
       return res.status(404).json({ success: false, message: 'Property not found' });
     }
 
+    if (property.status === 'rented') {
+      return res.status(400).json({ success: false, message: 'This property has already been sold out.' });
+    }
+
     const booking = await Booking.create({
       property: propertyId,
       tenant: req.user.id,
