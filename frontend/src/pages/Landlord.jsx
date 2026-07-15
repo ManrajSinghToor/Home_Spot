@@ -26,7 +26,8 @@ export default function Landlord() {
     price: '',
     address: '',
     phone: '',
-    description: ''
+    description: '',
+    image: ''
   });
 
   const loadLandlordProperties = async () => {
@@ -64,18 +65,20 @@ export default function Landlord() {
   const handleAddProperty = async (e) => {
     e.preventDefault();
     
+    const defaultImage = 'https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?q=80&w=2070&auto=format&fit=crop';
+    
     const propertyPayload = {
       title: newProperty.title,
       city: newProperty.city,
-      rooms: parseInt(newProperty.rooms, 10),
-      beds: parseInt(newProperty.beds, 10),
-      baths: parseInt(newProperty.baths, 10),
+      rooms: parseInt(newProperty.rooms, 10) || 1,
+      beds: parseInt(newProperty.beds, 10) || 1,
+      baths: parseInt(newProperty.baths, 10) || 1,
       sqft: newProperty.sqft,
       price: newProperty.price,
       address: newProperty.address,
       phone: newProperty.phone,
       description: newProperty.description,
-      image: 'https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?q=80&w=2070&auto=format&fit=crop'
+      image: newProperty.image.trim() || defaultImage
     };
 
     try {
@@ -93,7 +96,8 @@ export default function Landlord() {
         price: '',
         address: '',
         phone: '',
-        description: ''
+        description: '',
+        image: ''
       });
       setShowAddForm(false);
       showToast('Property created successfully in database!', 'success');
@@ -265,6 +269,8 @@ export default function Landlord() {
                       </div>
 
                       <input type="text" name="address" placeholder="Full Address *" value={newProperty.address} onChange={handleInputChange} required className="glass-input" />
+                      
+                      <input type="url" name="image" placeholder="Image URL (Unsplash or web link)" value={newProperty.image} onChange={handleInputChange} className="glass-input" />
                       
                       <textarea name="description" placeholder="Short description..." value={newProperty.description} onChange={handleInputChange} rows="3" className="glass-input" style={{ resize: 'none' }}></textarea>
                       
