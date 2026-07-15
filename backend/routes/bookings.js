@@ -88,16 +88,25 @@ router.put('/:id', protect, async (req, res) => {
       booking.paymentStatus = paymentStatus;
     }
 
-    // Update lease status (approve/decline) - landlords only
+    // Update lease status (approve/decline/cancel)
     if (status) {
       const property = await Property.findById(booking.property);
       if (!property) {
         return res.status(404).json({ success: false, message: 'Property not found' });
       }
-      
-      // Check if logged in user is the landlord of the property
-      if (String(property.landlord) !== String(req.user.id)) {
-        return res.status(403).json({ success: false, message: 'Not authorized to approve/decline requests' });
+
+      if (status === 'cancelled') {
+        // Tenant who made the booking or the landlord of the property can cancel
+        const isTenant = String(booking.tenant) === String(req.user.id);
+        const isLandlord = String(property.landlord) === String(req.user.id);
+        if (!isTenant && !isLandlord) {
+          return res.status(403).json({ success: false, message: 'Not authorized to cancel this booking' });
+        }
+      } else {
+        // Only the landlord of the property can approve/decline requests
+        if (String(property.landlord) !== String(req.user.id)) {
+          return res.status(403).json({ success: false, message: 'Only landlords can approve or decline requests' });
+        }
       }
       booking.status = status;
     }

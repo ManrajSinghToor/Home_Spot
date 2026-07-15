@@ -64,6 +64,18 @@ export default function Profile() {
     showToast(`Downloading: ${docName}`, 'success');
   };
 
+  const handleCancelBooking = async (bookingId) => {
+    if (!window.confirm('Are you sure you want to cancel this booking request?')) return;
+    try {
+      const updated = await api.bookings.updateBooking(bookingId, { status: 'cancelled' });
+      setBookings(prev => prev.map(b => (b._id === bookingId || b.id === bookingId) ? updated : b));
+      showToast('Booking inquiry cancelled successfully.', 'info');
+    } catch (err) {
+      console.error('Error cancelling booking:', err);
+      showToast(err.message || 'Failed to cancel booking.', 'error');
+    }
+  };
+
   const handleLogout = () => {
     logout();
     showToast('Logged out successfully', 'info');
@@ -164,6 +176,7 @@ export default function Profile() {
                       const getLeaseBadgeStyles = (status) => {
                         if (status === 'approved') return { bg: 'rgba(16, 185, 129, 0.15)', color: '#10b981' };
                         if (status === 'declined') return { bg: 'rgba(239, 68, 68, 0.15)', color: '#ef4444' };
+                        if (status === 'cancelled') return { bg: 'rgba(255, 255, 255, 0.12)', color: '#71717a' };
                         return { bg: 'rgba(245, 158, 11, 0.15)', color: '#f59e0b' };
                       };
 
@@ -235,7 +248,7 @@ export default function Profile() {
                                   <i className="far fa-comments"></i> Chat
                                 </button>
                                 
-                                {booking.paymentStatus !== 'paid' && booking.status !== 'declined' && (
+                                {booking.status !== 'cancelled' && booking.status !== 'declined' && booking.paymentStatus !== 'paid' && (
                                   <button
                                     onClick={() => navigate(`/payment?bookingId=${id}`)}
                                     className="glow-btn"
@@ -251,6 +264,25 @@ export default function Profile() {
                                     }}
                                   >
                                     Pay Escrow Deposit
+                                  </button>
+                                )}
+
+                                {booking.status !== 'cancelled' && booking.status !== 'declined' && (
+                                  <button
+                                    onClick={() => handleCancelBooking(id)}
+                                    className="glow-btn"
+                                    style={{
+                                      padding: '6px 12px',
+                                      borderRadius: '6px',
+                                      background: 'rgba(239, 68, 68, 0.1)',
+                                      color: '#ef4444',
+                                      border: '1px solid rgba(239, 68, 68, 0.2)',
+                                      fontSize: '0.8rem',
+                                      fontWeight: '600',
+                                      cursor: 'pointer'
+                                    }}
+                                  >
+                                    Cancel Booking
                                   </button>
                                 )}
                               </div>
