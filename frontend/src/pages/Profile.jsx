@@ -267,7 +267,7 @@ export default function Profile() {
                                   </button>
                                 )}
 
-                                {booking.status !== 'cancelled' && booking.status !== 'declined' && (
+                                {booking.status !== 'cancelled' && booking.status !== 'declined' && booking.paymentStatus !== 'paid' && (
                                   <button
                                     onClick={() => handleCancelBooking(id)}
                                     className="glow-btn"

@@ -404,6 +404,25 @@ export default function Landlord() {
                     <ThreeDTilt key={p._id || p.id} className="property-card glass-panel" maxTilt={6} scale={1.01} style={{ border: '1px solid rgba(255,255,255,0.08)' }}>
                       <div style={{ position: 'relative' }}>
                         <img src={p.image} alt={p.title} style={{ width: '100%', height: '170px', objectFit: 'cover' }} />
+                        {p.status === 'rented' && (
+                          <div style={{
+                            position: 'absolute',
+                            top: '10px',
+                            left: '10px',
+                            background: 'rgba(239, 68, 68, 0.95)',
+                            color: '#fff',
+                            padding: '4px 10px',
+                            borderRadius: '4px',
+                            fontSize: '0.7rem',
+                            fontWeight: '700',
+                            letterSpacing: '1px',
+                            textTransform: 'uppercase',
+                            boxShadow: '0 0 10px rgba(239, 68, 68, 0.5)',
+                            zIndex: 5
+                          }}>
+                            SOLD
+                          </div>
+                        )}
                         <button 
                           onClick={(e) => handleDeleteProperty(p._id || p.id, e)}
                           style={{ position: 'absolute', top: '10px', right: '10px', background: 'rgba(239, 68, 68, 0.9)', border: 'none', borderRadius: '50%', width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#fff' }}

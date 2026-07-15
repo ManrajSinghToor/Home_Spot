@@ -34,8 +34,27 @@ export default function PropertyCard({ property, isFavorited = false, onToggle }
       maxTilt={8}
       scale={1.02}
     >
-      <Link to="/listings">
+      <Link to="/listings" style={{ position: 'relative', display: 'block' }}>
         <img src={property.imgSrc || property.image} alt={property.imgAlt || property.title} />
+        {property.status === 'rented' && (
+          <div style={{
+            position: 'absolute',
+            top: '15px',
+            left: '15px',
+            background: 'rgba(239, 68, 68, 0.95)',
+            color: '#fff',
+            padding: '5px 12px',
+            borderRadius: '6px',
+            fontSize: '0.75rem',
+            fontWeight: '700',
+            letterSpacing: '1.2px',
+            textTransform: 'uppercase',
+            boxShadow: '0 0 15px rgba(239, 68, 68, 0.65)',
+            zIndex: 5
+          }}>
+            SOLD
+          </div>
+        )}
       </Link>
       <button 
         className={`fav-button ${favorited ? 'favorited' : ''}`} 
@@ -56,7 +75,11 @@ export default function PropertyCard({ property, isFavorited = false, onToggle }
           <h3>{property.title}</h3>
           <p className="price">{property.price}</p>
         </div>
-        <button className="book-now-btn glow-btn" onClick={handleBookNow}>Book Now</button>
+        {property.status === 'rented' ? (
+          <button className="book-now-btn" disabled style={{ background: '#27272a', color: '#71717a', cursor: 'not-allowed', boxShadow: 'none', width: '100%', margin: '10px auto', padding: '12px 24px', borderRadius: '8px', border: 'none', fontWeight: '600' }}>Sold / Rented</button>
+        ) : (
+          <button className="book-now-btn glow-btn" onClick={handleBookNow}>Book Now</button>
+        )}
       </div>
     </ThreeDTilt>
   );

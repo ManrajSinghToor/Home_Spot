@@ -2,13 +2,47 @@ const express = require('express');
 const router = express.Router();
 const Booking = require('../models/Booking');
 const Property = require('../models/Property');
+const Message = require('../models/Message');
 const { protect } = require('../middleware/auth');
+
+// Helper to handle property sold/rented actions
+const handlePropertySold = async (bookingId, propertyId, landlordId) => {
+  try {
+    // 1. Mark property as rented in the database
+    await Property.findByIdAndUpdate(propertyId, { status: 'rented' });
+
+    // 2. Find all other active bookings for the same property
+    const otherBookings = await Booking.find({ 
+      property: propertyId, 
+      _id: { $ne: bookingId }, 
+      status: { $in: ['pending', 'approved'] } 
+    });
+
+    // 3. Decline other bookings and send system messages in chat
+    for (const other of otherBookings) {
+      other.status = 'declined';
+      await other.save();
+
+      await Message.create({
+        booking: other._id,
+        sender: landlordId,
+        senderName: 'System Notification',
+        text: 'This property has been rented to another tenant. Your booking inquiry has been closed.'
+      });
+    }
+  } catch (err) {
+    console.error('Error handling property sold actions:', err);
+  }
+};
 
 // @desc    Create a new booking inquiry
 // @route   POST /api/bookings
 router.post('/', protect, async (req, res) => {
   try {
     const { propertyId, name, email, phone, moveInDate, duration, message, status } = req.body;
+    if (!propertyId || !name || !email || !phone || !duration) {
+      return res.status(400).json({ success: false, message: 'Please provide all required fields' });
+    }
 
     const property = await Property.findById(propertyId);
     if (!property) {
@@ -82,10 +116,14 @@ router.put('/:id', protect, async (req, res) => {
     }
 
     const { status, paymentStatus } = req.body;
+    let soldTriggered = false;
 
     // Update payment status
     if (paymentStatus) {
       booking.paymentStatus = paymentStatus;
+      if (paymentStatus === 'paid' && booking.status === 'approved') {
+        soldTriggered = true;
+      }
     }
 
     // Update lease status (approve/decline/cancel)
@@ -96,6 +134,9 @@ router.put('/:id', protect, async (req, res) => {
       }
 
       if (status === 'cancelled') {
+        if (booking.paymentStatus === 'paid') {
+          return res.status(400).json({ success: false, message: 'Cannot cancel a booking that is already paid.' });
+        }
         // Tenant who made the booking (matching ID or email) or the landlord of the property can cancel
         const isTenant = (booking.tenant && String(booking.tenant) === String(req.user.id)) || 
                          (booking.email && booking.email.toLowerCase() === req.user.email.toLowerCase());
@@ -110,9 +151,18 @@ router.put('/:id', protect, async (req, res) => {
         }
       }
       booking.status = status;
+      if (status === 'approved' && booking.paymentStatus === 'paid') {
+        soldTriggered = true;
+      }
     }
 
     await booking.save();
+    
+    if (soldTriggered) {
+      const property = await Property.findById(booking.property);
+      const landlordId = property ? property.landlord : req.user.id;
+      await handlePropertySold(booking._id, booking.property, landlordId);
+    }
     
     // Repopulate details for response
     const updatedBooking = await Booking.findById(booking._id)
