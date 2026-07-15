@@ -7,6 +7,7 @@ import Footer from '../components/Footer';
 import PageTransition from '../components/PageTransition';
 import { motion, AnimatePresence } from 'framer-motion';
 import { api } from '../services/api';
+import ThreeDTilt from '../components/ThreeDTilt';
 
 export default function Landlord() {
   const { user } = useUser();
