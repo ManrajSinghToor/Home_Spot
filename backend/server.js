@@ -144,6 +144,9 @@ const SEED_PROPERTIES = [
   }
 ];
 
+const fs = require('fs');
+const path = require('path');
+
 // Seed Database helper
 const seedDatabase = async () => {
   try {
@@ -162,7 +165,38 @@ const seedDatabase = async () => {
         });
       }
 
-      const propertiesWithLandlord = SEED_PROPERTIES.map(p => ({
+      let sourceProperties = [];
+      try {
+        console.log('Fetching properties from remote open-source API...');
+        const response = await fetch('https://raw.githubusercontent.com/ManrajSinghToor/Home_Spot/main/properties.json');
+        if (response.ok) {
+          sourceProperties = await response.json();
+          console.log(`Successfully fetched ${sourceProperties.length} properties from open-source API.`);
+        } else {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+      } catch (fetchErr) {
+        console.log('Remote open-source API fetch failed. Trying local properties.json fallback...');
+        try {
+          const localPath = path.join(__dirname, '../properties.json');
+          if (fs.existsSync(localPath)) {
+            const fileData = fs.readFileSync(localPath, 'utf8');
+            sourceProperties = JSON.parse(fileData);
+            console.log(`Successfully loaded ${sourceProperties.length} properties from local properties.json fallback.`);
+          } else {
+            throw new Error('Local properties.json file does not exist');
+          }
+        } catch (localErr) {
+          console.log('Local fallback failed. Seeding from hardcoded default list.', localErr.message);
+          sourceProperties = SEED_PROPERTIES;
+        }
+      }
+
+      if (!Array.isArray(sourceProperties) || sourceProperties.length === 0) {
+        sourceProperties = SEED_PROPERTIES;
+      }
+
+      const propertiesWithLandlord = sourceProperties.map(p => ({
         ...p,
         landlord: landlord._id
       }));

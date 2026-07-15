@@ -8,7 +8,7 @@ const { protect } = require('../middleware/auth');
 // @route   POST /api/bookings
 router.post('/', protect, async (req, res) => {
   try {
-    const { propertyId, name, email, phone, moveInDate, duration, message } = req.body;
+    const { propertyId, name, email, phone, moveInDate, duration, message, status } = req.body;
 
     const property = await Property.findById(propertyId);
     if (!property) {
@@ -23,7 +23,8 @@ router.post('/', protect, async (req, res) => {
       phone,
       moveInDate,
       duration,
-      message
+      message,
+      status: status || 'pending'
     });
 
     res.status(201).json({ success: true, booking });

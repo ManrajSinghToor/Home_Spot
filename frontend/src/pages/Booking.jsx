@@ -52,26 +52,24 @@ export default function Booking() {
     e.preventDefault();
     setLoading(true);
 
-    setTimeout(() => {
-      const bookingHistory = JSON.parse(localStorage.getItem('bookingHistory')) || [];
-      const newBooking = {
-        id: Date.now(),
-        title: property.title,
-        city: property.city || 'Punjab',
-        price: property.price,
-        date: new Date().toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }),
-        status: 'pending',
+    // Save pending booking details to localStorage for checkout redirection
+    const pendingBooking = {
+      property,
+      bookingData: {
+        name: bookingData.name,
+        email: bookingData.email,
+        phone: bookingData.phone,
         moveInDate: bookingData.moveInDate,
-        duration: bookingData.duration
-      };
-      
-      bookingHistory.push(newBooking);
-      localStorage.setItem('bookingHistory', JSON.stringify(bookingHistory));
+        duration: bookingData.duration,
+        message: bookingData.message
+      }
+    };
+    localStorage.setItem('pendingBooking', JSON.stringify(pendingBooking));
 
+    setTimeout(() => {
       setLoading(false);
-      showToast('Booking request submitted! We will contact you soon.', 'success');
-      navigate('/profile');
-    }, 1500);
+      navigate('/payment');
+    }, 800);
   };
 
   if (!property) return null;
@@ -169,7 +167,7 @@ export default function Booking() {
                     marginTop: '10px'
                   }}
                 >
-                  {loading ? 'Submitting Request...' : 'Confirm Booking Request'}
+                  {loading ? 'Redirecting to Checkout...' : 'Proceed to Secure Checkout'}
                 </button>
               </form>
             </div>

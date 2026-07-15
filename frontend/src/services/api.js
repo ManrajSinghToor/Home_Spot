@@ -422,7 +422,8 @@ export const api = {
           phone: bookingData.phone,
           moveInDate: bookingData.moveInDate || bookingData.date,
           duration: bookingData.duration,
-          message: bookingData.message
+          message: bookingData.message,
+          status: bookingData.status || 'pending'
         })
       });
       const data = await response.json();

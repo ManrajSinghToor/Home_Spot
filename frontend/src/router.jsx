@@ -15,6 +15,7 @@ import VirtualTour from './pages/VirtualTour';
 import Compare from './pages/Compare';
 import Blog from './pages/Blog';
 import Settings from './pages/Settings';
+import Payment from './pages/Payment';
 import ErrorBoundary from './components/ErrorBoundary';
 
 export default function Router() {
@@ -37,6 +38,7 @@ export default function Router() {
           <Route path="/compare" element={<Compare />} />
           <Route path="/blog" element={<Blog />} />
           <Route path="/settings" element={<Settings />} />
+          <Route path="/payment" element={<Payment />} />
         </Routes>
       </BrowserRouter>
     </ErrorBoundary>
