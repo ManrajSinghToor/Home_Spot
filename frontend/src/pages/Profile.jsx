@@ -248,7 +248,7 @@ export default function Profile() {
                                   <i className="far fa-comments"></i> Chat
                                 </button>
                                 
-                                {booking.status !== 'cancelled' && booking.status !== 'declined' && booking.paymentStatus !== 'paid' && (
+                                {booking.status === 'approved' && booking.paymentStatus !== 'paid' && (
                                   <button
                                     onClick={() => navigate(`/payment?bookingId=${id}`)}
                                     className="glow-btn"

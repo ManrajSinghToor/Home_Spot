@@ -18,16 +18,16 @@ const handlePropertySold = async (bookingId, propertyId, landlordId) => {
       status: { $in: ['pending', 'approved'] } 
     });
 
-    // 3. Decline other bookings and send system messages in chat
+    // 3. Cancel other bookings and send system messages in chat
     for (const other of otherBookings) {
-      other.status = 'declined';
+      other.status = 'cancelled';
       await other.save();
 
       await Message.create({
         booking: other._id,
         sender: landlordId,
         senderName: 'System Notification',
-        text: 'This property has been rented to another tenant. Your booking inquiry has been closed.'
+        text: 'This property has been sold out to another tenant. Your booking inquiry has been cancelled.'
       });
     }
   } catch (err) {
@@ -120,6 +120,9 @@ router.put('/:id', protect, async (req, res) => {
 
     // Update payment status
     if (paymentStatus) {
+      if (paymentStatus === 'paid' && booking.status !== 'approved') {
+        return res.status(400).json({ success: false, message: 'Payment is not allowed until the landlord has approved the booking request.' });
+      }
       booking.paymentStatus = paymentStatus;
       if (paymentStatus === 'paid' && booking.status === 'approved') {
         soldTriggered = true;

@@ -420,7 +420,7 @@ export default function Landlord() {
                             boxShadow: '0 0 10px rgba(239, 68, 68, 0.5)',
                             zIndex: 5
                           }}>
-                            SOLD
+                            SOLD OUT
                           </div>
                         )}
                         <button 

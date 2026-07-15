@@ -52,7 +52,7 @@ export default function PropertyCard({ property, isFavorited = false, onToggle }
             boxShadow: '0 0 15px rgba(239, 68, 68, 0.65)',
             zIndex: 5
           }}>
-            SOLD
+            SOLD OUT
           </div>
         )}
       </Link>
