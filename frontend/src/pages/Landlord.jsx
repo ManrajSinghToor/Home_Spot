@@ -63,6 +63,21 @@ export default function Landlord() {
     setNewProperty(prev => ({ ...prev, [name]: value }));
   };
 
+  const handleFileChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) {
+        showToast('Image file size must be less than 5MB.', 'warning');
+        return;
+      }
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setNewProperty(prev => ({ ...prev, image: reader.result }));
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   const handleAddProperty = async (e) => {
     e.preventDefault();
     
@@ -271,7 +286,56 @@ export default function Landlord() {
 
                       <input type="text" name="address" placeholder="Full Address *" value={newProperty.address} onChange={handleInputChange} required className="glass-input" />
                       
-                      <input type="url" name="image" placeholder="Image URL (Unsplash or web link)" value={newProperty.image} onChange={handleInputChange} className="glass-input" />
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        <label style={{ display: 'block', color: '#a1a1aa', fontSize: '0.85rem', fontWeight: '500' }}>Property Image *</label>
+                        <div style={{ display: 'flex', gap: '15px', alignItems: 'center' }}>
+                          <label 
+                            className="glow-btn" 
+                            style={{ 
+                              padding: '10px 15px', 
+                              borderRadius: '6px', 
+                              background: 'rgba(255,255,255,0.03)', 
+                              border: '1px dashed rgba(255,255,255,0.15)', 
+                              color: '#fff', 
+                              fontSize: '0.85rem', 
+                              cursor: 'pointer',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '8px'
+                            }}
+                          >
+                            <i className="fas fa-cloud-upload-alt"></i> Choose from device
+                            <input 
+                              type="file" 
+                              accept="image/*" 
+                              onChange={handleFileChange} 
+                              style={{ display: 'none' }} 
+                            />
+                          </label>
+                          <span style={{ color: '#71717a', fontSize: '0.8rem' }}>- OR -</span>
+                          <input 
+                            type="text" 
+                            name="image" 
+                            placeholder="Paste image URL..." 
+                            value={newProperty.image.startsWith('data:') ? '' : newProperty.image} 
+                            onChange={handleInputChange} 
+                            className="glass-input" 
+                            style={{ flexGrow: 1, margin: 0 }} 
+                          />
+                        </div>
+                        {newProperty.image && (
+                          <div style={{ position: 'relative', width: '100%', height: '140px', borderRadius: '8px', overflow: 'hidden', marginTop: '5px', border: '1px solid rgba(255,255,255,0.1)' }}>
+                            <img src={newProperty.image} alt="Preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                            <button
+                              type="button"
+                              onClick={() => setNewProperty(prev => ({ ...prev, image: '' }))}
+                              style={{ position: 'absolute', top: '8px', right: '8px', background: 'rgba(239, 68, 68, 0.9)', border: 'none', borderRadius: '50%', width: '28px', height: '28px', color: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                            >
+                              <i className="fas fa-times"></i>
+                            </button>
+                          </div>
+                        )}
+                      </div>
                       
                       <textarea name="description" placeholder="Short description..." value={newProperty.description} onChange={handleInputChange} rows="3" className="glass-input" style={{ resize: 'none' }}></textarea>
                       
