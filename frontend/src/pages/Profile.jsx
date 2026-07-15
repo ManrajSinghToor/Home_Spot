@@ -6,6 +6,7 @@ import Header from '../components/Header';
 import Footer from '../components/Footer';
 import PageTransition from '../components/PageTransition';
 import ThreeDTilt from '../components/ThreeDTilt';
+import ChatDrawer from '../components/ChatDrawer';
 
 const MOCK_DOCS = [
   { id: 1, name: 'Registered Rent Agreement.pdf', size: '1.2 MB', type: 'PDF' },
@@ -26,6 +27,15 @@ export default function Profile() {
   const navigate = useNavigate();
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
+  
+  // Chat Drawer states
+  const [selectedBooking, setSelectedBooking] = useState(null);
+  const [isChatOpen, setIsChatOpen] = useState(false);
+
+  const openChat = (booking) => {
+    setSelectedBooking(booking);
+    setIsChatOpen(true);
+  };
 
   useEffect(() => {
     if (!user) {
@@ -149,30 +159,102 @@ export default function Profile() {
                       const price = booking.property ? booking.property.price : booking.price;
                       const date = booking.moveInDate ? new Date(booking.moveInDate).toLocaleDateString() : booking.date;
                       const id = booking._id || booking.id;
+                      
+                      // Status colors
+                      const getLeaseBadgeStyles = (status) => {
+                        if (status === 'approved') return { bg: 'rgba(16, 185, 129, 0.15)', color: '#10b981' };
+                        if (status === 'declined') return { bg: 'rgba(239, 68, 68, 0.15)', color: '#ef4444' };
+                        return { bg: 'rgba(245, 158, 11, 0.15)', color: '#f59e0b' };
+                      };
+
+                      const getPaymentBadgeStyles = (payStatus) => {
+                        if (payStatus === 'paid') return { bg: 'rgba(16, 185, 129, 0.15)', color: '#10b981', text: 'Paid' };
+                        return { bg: 'rgba(239, 68, 68, 0.15)', color: '#ef4444', text: 'Unpaid' };
+                      };
+
+                      const leaseStyles = getLeaseBadgeStyles(booking.status);
+                      const paymentStyles = getPaymentBadgeStyles(booking.paymentStatus || 'unpaid');
+
                       return (
                         <div key={id} className={`timeline-item ${booking.status === 'approved' ? 'active' : 'pending'}`}>
                           <div className="timeline-node"></div>
-                          <div style={{ paddingLeft: '15px' }}>
-                            <div style={{ display: 'flex', justifycontent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
+                          <div style={{ paddingLeft: '15px', width: '100%' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
                               <h4 style={{ color: '#fff', fontSize: '1.1rem', fontWeight: '600', margin: 0 }}>{title}</h4>
-                              <span style={{
-                                fontSize: '0.75rem',
-                                padding: '4px 10px',
-                                borderRadius: '20px',
-                                fontWeight: '600',
-                                textTransform: 'uppercase',
-                                background: booking.status === 'approved' ? 'rgba(16, 185, 129, 0.15)' : 'rgba(245, 158, 11, 0.15)',
-                                color: booking.status === 'approved' ? '#10b981' : '#f59e0b'
-                              }}>
-                                {booking.status}
-                              </span>
+                              <div style={{ display: 'flex', gap: '8px' }}>
+                                <span style={{
+                                  fontSize: '0.7rem',
+                                  padding: '3px 8px',
+                                  borderRadius: '20px',
+                                  fontWeight: '600',
+                                  textTransform: 'uppercase',
+                                  background: leaseStyles.bg,
+                                  color: leaseStyles.color
+                                }}>
+                                  Lease: {booking.status || 'pending'}
+                                </span>
+                                <span style={{
+                                  fontSize: '0.7rem',
+                                  padding: '3px 8px',
+                                  borderRadius: '20px',
+                                  fontWeight: '600',
+                                  textTransform: 'uppercase',
+                                  background: paymentStyles.bg,
+                                  color: paymentStyles.color
+                                }}>
+                                  Payment: {paymentStyles.text}
+                                </span>
+                              </div>
                             </div>
                             <p style={{ color: '#a1a1aa', fontSize: '0.85rem', margin: '5px 0' }}>
                               {city} &bull; Booked on {date}
                             </p>
-                            <p style={{ color: 'var(--primary-color)', fontSize: '0.95rem', fontWeight: '600', margin: 0 }}>
-                              {price}
-                            </p>
+                            
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '10px', flexWrap: 'wrap', gap: '10px' }}>
+                              <p style={{ color: 'var(--primary-color)', fontSize: '0.95rem', fontWeight: '600', margin: 0 }}>
+                                {price}
+                              </p>
+                              <div style={{ display: 'flex', gap: '10px' }}>
+                                <button
+                                  onClick={() => openChat(booking)}
+                                  className="glow-btn"
+                                  style={{
+                                    padding: '6px 12px',
+                                    borderRadius: '6px',
+                                    background: 'rgba(255,255,255,0.03)',
+                                    color: '#fff',
+                                    fontSize: '0.8rem',
+                                    fontWeight: '600',
+                                    cursor: 'pointer',
+                                    border: '1px solid rgba(255,255,255,0.1)',
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '6px'
+                                  }}
+                                >
+                                  <i className="far fa-comments"></i> Chat
+                                </button>
+                                
+                                {booking.paymentStatus !== 'paid' && booking.status !== 'declined' && (
+                                  <button
+                                    onClick={() => navigate(`/payment?bookingId=${id}`)}
+                                    className="glow-btn"
+                                    style={{
+                                      padding: '6px 14px',
+                                      borderRadius: '6px',
+                                      background: 'var(--primary-gradient)',
+                                      color: '#fff',
+                                      fontSize: '0.8rem',
+                                      fontWeight: '600',
+                                      cursor: 'pointer',
+                                      border: 'none'
+                                    }}
+                                  >
+                                    Pay Escrow Deposit
+                                  </button>
+                                )}
+                              </div>
+                            </div>
                           </div>
                         </div>
                       );
@@ -188,7 +270,7 @@ export default function Profile() {
                 </h3>
 
                 <div className="doc-grid">
-                  {!loading && bookings.some(b => b.status === 'approved') ? (
+                  {!loading && bookings.some(b => b.status === 'approved' && b.paymentStatus === 'paid') ? (
                     MOCK_DOCS.map((doc) => (
                       <ThreeDTilt 
                         key={doc.id}
@@ -215,7 +297,7 @@ export default function Profile() {
                     <div style={{ gridColumn: 'span 3', textAlign: 'center', padding: '40px 20px', color: '#a1a1aa', border: '1px dashed rgba(255,255,255,0.1)', borderRadius: '12px', width: '100%' }}>
                       <i className="fas fa-folder-open" style={{ fontSize: '2.5rem', color: '#71717a', marginBottom: '15px', display: 'block' }}></i>
                       <p style={{ margin: 0, fontWeight: '600' }}>No rental documents available.</p>
-                      <small style={{ color: '#71717a', display: 'block', marginTop: '5px' }}>Your lease agreements and payment receipts will appear here once a booking is approved.</small>
+                      <small style={{ color: '#71717a', display: 'block', marginTop: '5px' }}>Your lease agreements and payment receipts will appear here once your booking is approved by the landlord AND security deposit is paid.</small>
                     </div>
                   )}
                 </div>
@@ -227,6 +309,14 @@ export default function Profile() {
         </section>
       </main>
       <Footer />
+
+      {/* Dynamic Slide-out Chat Drawer */}
+      <ChatDrawer
+        isOpen={isChatOpen}
+        onClose={() => setIsChatOpen(false)}
+        booking={selectedBooking}
+        currentUser={user}
+      />
     </PageTransition>
   );
 }

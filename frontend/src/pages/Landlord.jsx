@@ -8,13 +8,25 @@ import PageTransition from '../components/PageTransition';
 import { motion, AnimatePresence } from 'framer-motion';
 import { api } from '../services/api';
 import ThreeDTilt from '../components/ThreeDTilt';
+import ChatDrawer from '../components/ChatDrawer';
 
 export default function Landlord() {
   const { user } = useUser();
   const { showToast } = useToast();
   const navigate = useNavigate();
   const [properties, setProperties] = useState([]);
+  const [bookings, setBookings] = useState([]);
   const [showAddForm, setShowAddForm] = useState(false);
+  const [loadingBookings, setLoadingBookings] = useState(true);
+
+  // Chat Drawer states
+  const [selectedBooking, setSelectedBooking] = useState(null);
+  const [isChatOpen, setIsChatOpen] = useState(false);
+
+  const openChat = (booking) => {
+    setSelectedBooking(booking);
+    setIsChatOpen(true);
+  };
   
   // State for adding a property
   const [newProperty, setNewProperty] = useState({
@@ -43,6 +55,19 @@ export default function Landlord() {
     }
   };
 
+  const loadLandlordBookings = async () => {
+    try {
+      setLoadingBookings(true);
+      const data = await api.bookings.getBookings();
+      setBookings(data || []);
+    } catch (err) {
+      console.error('Error loading landlord bookings:', err);
+      showToast('Failed to load tenant inquiries.', 'error');
+    } finally {
+      setLoadingBookings(false);
+    }
+  };
+
   useEffect(() => {
     if (!user) {
       navigate('/login');
@@ -56,6 +81,7 @@ export default function Landlord() {
     }
 
     loadLandlordProperties();
+    loadLandlordBookings();
   }, [user, navigate]);
 
   const handleInputChange = (e) => {
@@ -132,6 +158,28 @@ export default function Landlord() {
     } catch (err) {
       console.error('Error deleting property:', err);
       showToast(err.message || 'Failed to remove listing.', 'error');
+    }
+  };
+
+  const handleApproveBooking = async (bookingId) => {
+    try {
+      const updated = await api.bookings.updateBooking(bookingId, { status: 'approved' });
+      setBookings(prev => prev.map(b => (b._id === bookingId || b.id === bookingId) ? updated : b));
+      showToast('Booking approved successfully!', 'success');
+    } catch (err) {
+      console.error('Error approving booking:', err);
+      showToast(err.message || 'Failed to approve booking.', 'error');
+    }
+  };
+
+  const handleDeclineBooking = async (bookingId) => {
+    try {
+      const updated = await api.bookings.updateBooking(bookingId, { status: 'declined' });
+      setBookings(prev => prev.map(b => (b._id === bookingId || b.id === bookingId) ? updated : b));
+      showToast('Booking declined.', 'info');
+    } catch (err) {
+      console.error('Error declining booking:', err);
+      showToast(err.message || 'Failed to decline booking.', 'error');
     }
   };
 
@@ -379,10 +427,118 @@ export default function Landlord() {
               )}
             </div>
 
+            {/* Tenant Inquiries Section */}
+            <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '40px', marginTop: '40px' }}>
+              <h3 style={{ color: '#fff', fontSize: '1.5rem', fontWeight: '600', marginBottom: '25px', textAlign: 'left' }}>Tenant Booking Inquiries</h3>
+              
+              {loadingBookings ? (
+                <div style={{ textAlign: 'center', padding: '30px', color: '#a1a1aa' }}>
+                  <p>Loading inquiries...</p>
+                </div>
+              ) : bookings.length === 0 ? (
+                <div className="glass-panel" style={{ padding: '50px 30px', textAlign: 'center', border: '1px solid rgba(255,255,255,0.08)' }}>
+                  <i className="far fa-calendar-alt" style={{ fontSize: '3rem', color: '#71717a', marginBottom: '15px' }}></i>
+                  <h4 style={{ color: '#fff', marginBottom: '5px' }}>No inquiries received</h4>
+                  <p style={{ color: '#a1a1aa', margin: 0 }}>Tenants requesting your listings will appear here.</p>
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                  {bookings.map((b) => {
+                    const id = b._id || b.id;
+                    const propTitle = b.property ? b.property.title : 'Inquired Property';
+                    const propImage = b.property ? b.property.image : '';
+                    const moveIn = b.moveInDate ? new Date(b.moveInDate).toLocaleDateString() : '';
+                    
+                    return (
+                      <div key={id} className="glass-panel" style={{ padding: '25px', display: 'flex', flexDirection: 'row', gap: '20px', alignItems: 'center', border: '1px solid rgba(255,255,255,0.08)', flexWrap: 'wrap', textAlign: 'left' }}>
+                        {propImage && (
+                          <img src={propImage} alt={propTitle} style={{ width: '90px', height: '90px', objectFit: 'cover', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.06)' }} />
+                        )}
+                        <div style={{ flexGrow: 1, minWidth: '220px' }}>
+                          <h4 style={{ color: '#fff', fontSize: '1.15rem', fontWeight: '600', margin: '0 0 5px 0' }}>{propTitle}</h4>
+                          <p style={{ color: '#e4e4e7', fontSize: '0.85rem', margin: '0 0 5px 0' }}>
+                            Tenant: <strong style={{ color: 'var(--primary-color)' }}>{b.name}</strong> ({b.email})
+                          </p>
+                          <p style={{ color: '#a1a1aa', fontSize: '0.8rem', margin: 0 }}>
+                            Phone: {b.phone} &bull; Move-in: {moveIn} &bull; Lease: {b.duration} Mo.
+                          </p>
+                          {b.message && (
+                            <p style={{ color: '#71717a', fontSize: '0.8rem', fontStyle: 'italic', marginTop: '8px', background: 'rgba(255,255,255,0.02)', padding: '6px 10px', borderRadius: '4px', borderLeft: '2px solid var(--primary-color)' }}>
+                              "{b.message}"
+                            </p>
+                          )}
+                        </div>
+
+                        {/* Status Badges */}
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', minWidth: '120px' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', gap: '10px' }}>
+                            <span style={{ color: '#71717a' }}>Lease:</span>
+                            <span style={{ 
+                              fontWeight: '600', 
+                              color: b.status === 'approved' ? '#10b981' : b.status === 'declined' ? '#ef4444' : '#f59e0b' 
+                            }}>
+                              {(b.status || 'pending').toUpperCase()}
+                            </span>
+                          </div>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', gap: '10px' }}>
+                            <span style={{ color: '#71717a' }}>Payment:</span>
+                            <span style={{ 
+                              fontWeight: '600', 
+                              color: b.paymentStatus === 'paid' ? '#10b981' : '#ef4444' 
+                            }}>
+                              {(b.paymentStatus || 'unpaid').toUpperCase()}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Action buttons */}
+                        <div style={{ display: 'flex', gap: '10px', minWidth: '220px', justifyContent: 'flex-end', flexGrow: 1 }}>
+                          <button
+                            onClick={() => openChat(b)}
+                            className="glow-btn"
+                            style={{ padding: '8px 15px', background: 'rgba(255,255,255,0.04)', color: '#fff', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '6px', cursor: 'pointer', fontSize: '0.8rem', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '6px' }}
+                          >
+                            <i className="far fa-comments"></i> Chat
+                          </button>
+
+                          {b.status === 'pending' && (
+                            <>
+                              <button
+                                onClick={() => handleDeclineBooking(id)}
+                                className="glow-btn"
+                                style={{ padding: '8px 15px', background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', border: '1px solid rgba(239, 68, 68, 0.2)', borderRadius: '6px', cursor: 'pointer', fontSize: '0.8rem', fontWeight: '600' }}
+                              >
+                                Decline
+                              </button>
+                              <button
+                                onClick={() => handleApproveBooking(id)}
+                                className="glow-btn"
+                                style={{ padding: '8px 15px', background: 'var(--primary-gradient)', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '0.8rem', fontWeight: '600' }}
+                              >
+                                Approve
+                              </button>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
           </div>
         </section>
       </main>
       <Footer />
+
+      {/* Dynamic Slide-out Chat Drawer */}
+      <ChatDrawer
+        isOpen={isChatOpen}
+        onClose={() => setIsChatOpen(false)}
+        booking={selectedBooking}
+        currentUser={user}
+      />
     </PageTransition>
   );
 }

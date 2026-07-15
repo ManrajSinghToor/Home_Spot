@@ -219,6 +219,7 @@ app.use('/api/auth', require('./routes/auth'));
 app.use('/api/properties', require('./routes/properties'));
 app.use('/api/bookings', require('./routes/bookings'));
 app.use('/api/favorites', require('./routes/favorites'));
+app.use('/api/messages', require('./routes/messages'));
 
 // Simple index endpoint
 app.get('/', (req, res) => {

@@ -56,4 +56,63 @@ router.get('/', protect, async (req, res) => {
   }
 });
 
+// @desc    Get booking by ID
+// @route   GET /api/bookings/:id
+router.get('/:id', protect, async (req, res) => {
+  try {
+    const booking = await Booking.findById(req.params.id)
+      .populate('property')
+      .populate('tenant', 'username email');
+    if (!booking) {
+      return res.status(404).json({ success: false, message: 'Booking not found' });
+    }
+    res.json({ success: true, booking });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// @desc    Update booking status/paymentStatus
+// @route   PUT /api/bookings/:id
+router.put('/:id', protect, async (req, res) => {
+  try {
+    const booking = await Booking.findById(req.params.id);
+    if (!booking) {
+      return res.status(404).json({ success: false, message: 'Booking not found' });
+    }
+
+    const { status, paymentStatus } = req.body;
+
+    // Update payment status
+    if (paymentStatus) {
+      booking.paymentStatus = paymentStatus;
+    }
+
+    // Update lease status (approve/decline) - landlords only
+    if (status) {
+      const property = await Property.findById(booking.property);
+      if (!property) {
+        return res.status(404).json({ success: false, message: 'Property not found' });
+      }
+      
+      // Check if logged in user is the landlord of the property
+      if (String(property.landlord) !== String(req.user.id)) {
+        return res.status(403).json({ success: false, message: 'Not authorized to approve/decline requests' });
+      }
+      booking.status = status;
+    }
+
+    await booking.save();
+    
+    // Repopulate details for response
+    const updatedBooking = await Booking.findById(booking._id)
+      .populate('property')
+      .populate('tenant', 'username email');
+
+    res.json({ success: true, booking: updatedBooking });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
 module.exports = router;

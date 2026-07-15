@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useUser } from '../contexts/UserContext';
 import { useToast } from '../components/Toast';
 import Header from '../components/Header';
@@ -12,7 +12,9 @@ export default function Payment() {
   const { user } = useUser();
   const { showToast } = useToast();
   const navigate = useNavigate();
-  const [pending, setPending] = useState(null);
+  const [searchParams] = useSearchParams();
+  const [booking, setBooking] = useState(null);
+  const [loading, setLoading] = useState(true);
   
   // Payment states
   const [method, setMethod] = useState('card'); // card, upi, paypal, netbanking
@@ -31,18 +33,45 @@ export default function Payment() {
       return;
     }
 
-    const storedPending = localStorage.getItem('pendingBooking');
-    if (storedPending) {
-      setPending(JSON.parse(storedPending));
-    } else {
-      showToast('No booking transaction in progress.', 'info');
-      navigate('/listings');
+    const bookingId = searchParams.get('bookingId');
+    if (!bookingId) {
+      showToast('No booking transaction in progress.', 'error');
+      navigate('/profile');
+      return;
     }
-  }, [user, navigate]);
 
-  if (!pending) return null;
+    const loadBookingData = async () => {
+      try {
+        const fetchedBooking = await api.bookings.getBookingById(bookingId);
+        setBooking(fetchedBooking);
+      } catch (err) {
+        console.error('Error loading booking in Payment:', err);
+        showToast('Failed to load booking details for payment.', 'error');
+        navigate('/profile');
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  const { property, bookingData } = pending;
+    loadBookingData();
+  }, [user, searchParams, navigate]);
+
+  if (loading) {
+    return (
+      <PageTransition>
+        <Header />
+        <main style={{ background: '#09090b', minHeight: '95vh', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff' }}>
+          <h3>Loading payment details...</h3>
+        </main>
+        <Footer />
+      </PageTransition>
+    );
+  }
+
+  if (!booking) return null;
+
+  const { property } = booking;
+  if (!property) return null;
   
   // Calculate pricing breakdown
   // Clean price string and extract numeric value
@@ -102,35 +131,22 @@ export default function Payment() {
 
     // Phase 2 animation delay
     setTimeout(() => {
-      setProcessStep(3); // Saving booking
+      setProcessStep(3); // Saving payment state
     }, 3000);
 
-    // Make backend API call to persist booking
+    // Make backend API call to update booking payment status
     try {
       // Delay slightly to coordinate with UI steps
       await new Promise(resolve => setTimeout(resolve, 3800));
 
-      const response = await api.bookings.createBooking({
-        propertyId: property._id || property.id,
-        name: bookingData.name,
-        email: bookingData.email,
-        phone: bookingData.phone,
-        moveInDate: bookingData.moveInDate,
-        duration: bookingData.duration,
-        message: bookingData.message,
-        status: 'approved' // Bookings status set to approved upon payment completion
+      await api.bookings.updateBooking(booking._id || booking.id, {
+        paymentStatus: 'paid'
       });
 
       setProcessStep(4); // Success
 
       setTimeout(() => {
-        // Clear pending booking from localStorage
-        localStorage.removeItem('pendingBooking');
-        
-        // Remove individual storage backup if it matches
-        localStorage.removeItem('selectedProperty');
-
-        showToast('Rent deposit paid & booking successfully confirmed!', 'success');
+        showToast('Rent deposit paid successfully! Lease document locker is now unlocked (once landlord approves).', 'success');
         setProcessing(false);
         navigate('/profile');
       }, 1500);
@@ -183,15 +199,15 @@ export default function Payment() {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '15px' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
                     <span style={{ color: '#71717a' }}>Tenant Name:</span>
-                    <span style={{ color: '#fff', fontWeight: '500' }}>{bookingData.name}</span>
+                    <span style={{ color: '#fff', fontWeight: '500' }}>{booking.name}</span>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
                     <span style={{ color: '#71717a' }}>Preferred Move-In:</span>
-                    <span style={{ color: '#fff', fontWeight: '500' }}>{new Date(bookingData.moveInDate).toLocaleDateString()}</span>
+                    <span style={{ color: '#fff', fontWeight: '500' }}>{new Date(booking.moveInDate).toLocaleDateString()}</span>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
                     <span style={{ color: '#71717a' }}>Contract Lease:</span>
-                    <span style={{ color: '#fff', fontWeight: '500' }}>{bookingData.duration} Months</span>
+                    <span style={{ color: '#fff', fontWeight: '500' }}>{booking.duration} Months</span>
                   </div>
                 </div>
               </div>

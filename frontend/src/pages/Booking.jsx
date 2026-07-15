@@ -5,6 +5,7 @@ import { useToast } from '../components/Toast';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
 import PageTransition from '../components/PageTransition';
+import { api } from '../services/api';
 
 export default function Booking() {
   const { user } = useUser();
@@ -48,28 +49,33 @@ export default function Booking() {
     setBookingData(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
 
-    // Save pending booking details to localStorage for checkout redirection
-    const pendingBooking = {
-      property,
-      bookingData: {
+    try {
+      await api.bookings.createBooking({
+        propertyId: property._id || property.id,
         name: bookingData.name,
         email: bookingData.email,
         phone: bookingData.phone,
         moveInDate: bookingData.moveInDate,
         duration: bookingData.duration,
-        message: bookingData.message
-      }
-    };
-    localStorage.setItem('pendingBooking', JSON.stringify(pendingBooking));
+        message: bookingData.message,
+        status: 'pending' // Default starts as pending and unpaid
+      });
 
-    setTimeout(() => {
+      // Clear selection
+      localStorage.removeItem('selectedProperty');
+
+      showToast('Booking request submitted! Feel free to chat with the landlord and pay deposit to finalize.', 'success');
       setLoading(false);
-      navigate('/payment');
-    }, 800);
+      navigate('/profile');
+    } catch (err) {
+      console.error('Error submitting booking:', err);
+      showToast(err.message || 'Failed to submit booking request.', 'error');
+      setLoading(false);
+    }
   };
 
   if (!property) return null;
@@ -167,7 +173,7 @@ export default function Booking() {
                     marginTop: '10px'
                   }}
                 >
-                  {loading ? 'Redirecting to Checkout...' : 'Proceed to Secure Checkout'}
+                  {loading ? 'Submitting Booking...' : 'Confirm Booking Request'}
                 </button>
               </form>
             </div>

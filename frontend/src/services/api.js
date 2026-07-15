@@ -439,6 +439,28 @@ export const api = {
       const data = await response.json();
       if (!response.ok || !data.success) throw new Error(data.message || 'Failed to fetch bookings.');
       return data.bookings;
+    },
+
+    getBookingById: async (id) => {
+      await delay(200);
+      const response = await fetch(`${API_BASE}/api/bookings/${id}`, {
+        headers: getAuthHeaders()
+      });
+      const data = await response.json();
+      if (!response.ok || !data.success) throw new Error(data.message || 'Failed to fetch booking.');
+      return data.booking;
+    },
+
+    updateBooking: async (id, updateData) => {
+      await delay(200);
+      const response = await fetch(`${API_BASE}/api/bookings/${id}`, {
+        method: 'PUT',
+        headers: getAuthHeaders(),
+        body: JSON.stringify(updateData)
+      });
+      const data = await response.json();
+      if (!response.ok || !data.success) throw new Error(data.message || 'Failed to update booking.');
+      return data.booking;
     }
   },
 
@@ -465,6 +487,31 @@ export const api = {
       const data = await response.json();
       if (!response.ok || !data.success) throw new Error(data.message || 'Failed to toggle favorite.');
       return data.favorites.map(normalizeProperty);
+    }
+  },
+
+  // Messages / Chat
+  messages: {
+    getMessages: async (bookingId) => {
+      await delay(100);
+      const response = await fetch(`${API_BASE}/api/messages/${bookingId}`, {
+        headers: getAuthHeaders()
+      });
+      const data = await response.json();
+      if (!response.ok || !data.success) throw new Error(data.message || 'Failed to fetch messages.');
+      return data.messages;
+    },
+
+    sendMessage: async (bookingId, text) => {
+      await delay(100);
+      const response = await fetch(`${API_BASE}/api/messages`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({ bookingId, text })
+      });
+      const data = await response.json();
+      if (!response.ok || !data.success) throw new Error(data.message || 'Failed to send message.');
+      return data.message;
     }
   }
 };
