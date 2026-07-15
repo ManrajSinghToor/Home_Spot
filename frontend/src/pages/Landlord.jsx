@@ -6,6 +6,7 @@ import Header from '../components/Header';
 import Footer from '../components/Footer';
 import PageTransition from '../components/PageTransition';
 import { motion, AnimatePresence } from 'framer-motion';
+import { api } from '../services/api';
 
 export default function Landlord() {
   const { user } = useUser();
@@ -28,6 +29,18 @@ export default function Landlord() {
     description: ''
   });
 
+  const loadLandlordProperties = async () => {
+    try {
+      const allProps = await api.properties.getListings();
+      // Filter properties owned by this landlord username
+      const owned = allProps.filter(p => p.landlord && p.landlord.username === user?.username);
+      setProperties(owned);
+    } catch (err) {
+      console.error('Error loading landlord properties:', err);
+      showToast('Failed to load properties from backend.', 'error');
+    }
+  };
+
   useEffect(() => {
     if (!user) {
       navigate('/login');
@@ -40,9 +53,7 @@ export default function Landlord() {
       return;
     }
 
-    // Load landlord's properties
-    const landlordProperties = JSON.parse(localStorage.getItem('landlordProperties')) || [];
-    setProperties(landlordProperties);
+    loadLandlordProperties();
   }, [user, navigate]);
 
   const handleInputChange = (e) => {
@@ -50,43 +61,58 @@ export default function Landlord() {
     setNewProperty(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleAddProperty = (e) => {
+  const handleAddProperty = async (e) => {
     e.preventDefault();
     
-    const property = {
-      id: Date.now(),
-      ...newProperty,
-      status: 'available',
+    const propertyPayload = {
+      title: newProperty.title,
+      city: newProperty.city,
+      rooms: parseInt(newProperty.rooms, 10),
+      beds: parseInt(newProperty.beds, 10),
+      baths: parseInt(newProperty.baths, 10),
+      sqft: newProperty.sqft,
+      price: newProperty.price,
+      address: newProperty.address,
+      phone: newProperty.phone,
+      description: newProperty.description,
       image: 'https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?q=80&w=2070&auto=format&fit=crop'
     };
 
-    const updatedProperties = [...properties, property];
-    setProperties(updatedProperties);
-    localStorage.setItem('landlordProperties', JSON.stringify(updatedProperties));
-
-    // Reset Form
-    setNewProperty({
-      title: '',
-      city: '',
-      rooms: '',
-      beds: '',
-      baths: '',
-      sqft: '',
-      price: '',
-      address: '',
-      phone: '',
-      description: ''
-    });
-    setShowAddForm(false);
-    showToast('Property created successfully!', 'success');
+    try {
+      const created = await api.properties.createListing(propertyPayload);
+      setProperties(prev => [...prev, created]);
+      
+      // Reset Form
+      setNewProperty({
+        title: '',
+        city: '',
+        rooms: '',
+        beds: '',
+        baths: '',
+        sqft: '',
+        price: '',
+        address: '',
+        phone: '',
+        description: ''
+      });
+      setShowAddForm(false);
+      showToast('Property created successfully in database!', 'success');
+    } catch (err) {
+      console.error('Error creating property:', err);
+      showToast(err.message || 'Failed to publish listing.', 'error');
+    }
   };
 
-  const handleDeleteProperty = (id, e) => {
+  const handleDeleteProperty = async (id, e) => {
     e.stopPropagation();
-    const updatedProperties = properties.filter(prop => prop.id !== id);
-    setProperties(updatedProperties);
-    localStorage.setItem('landlordProperties', JSON.stringify(updatedProperties));
-    showToast('Property removed successfully.', 'info');
+    try {
+      await api.properties.deleteListing(id);
+      setProperties(prev => prev.filter(prop => (prop.id !== id && prop._id !== id)));
+      showToast('Property listing deleted from database.', 'info');
+    } catch (err) {
+      console.error('Error deleting property:', err);
+      showToast(err.message || 'Failed to remove listing.', 'error');
+    }
   };
 
   // Mock revenue chart path coordinates (SVG width=400, height=120)
@@ -264,11 +290,11 @@ export default function Landlord() {
               ) : (
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(290px, 1fr))', gap: '25px' }}>
                   {properties.map((p) => (
-                    <ThreeDTilt key={p.id} className="property-card glass-panel" maxTilt={6} scale={1.01} style={{ border: '1px solid rgba(255,255,255,0.08)' }}>
+                    <ThreeDTilt key={p._id || p.id} className="property-card glass-panel" maxTilt={6} scale={1.01} style={{ border: '1px solid rgba(255,255,255,0.08)' }}>
                       <div style={{ position: 'relative' }}>
                         <img src={p.image} alt={p.title} style={{ width: '100%', height: '170px', objectFit: 'cover' }} />
                         <button 
-                          onClick={(e) => handleDeleteProperty(p.id, e)}
+                          onClick={(e) => handleDeleteProperty(p._id || p.id, e)}
                           style={{ position: 'absolute', top: '10px', right: '10px', background: 'rgba(239, 68, 68, 0.9)', border: 'none', borderRadius: '50%', width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#fff' }}
                         >
                           <i className="fas fa-trash"></i>
