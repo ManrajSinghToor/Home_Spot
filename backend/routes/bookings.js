@@ -96,8 +96,9 @@ router.put('/:id', protect, async (req, res) => {
       }
 
       if (status === 'cancelled') {
-        // Tenant who made the booking or the landlord of the property can cancel
-        const isTenant = String(booking.tenant) === String(req.user.id);
+        // Tenant who made the booking (matching ID or email) or the landlord of the property can cancel
+        const isTenant = (booking.tenant && String(booking.tenant) === String(req.user.id)) || 
+                         (booking.email && booking.email.toLowerCase() === req.user.email.toLowerCase());
         const isLandlord = String(property.landlord) === String(req.user.id);
         if (!isTenant && !isLandlord) {
           return res.status(403).json({ success: false, message: 'Not authorized to cancel this booking' });
