@@ -11,7 +11,7 @@ public class Property {
     @GeneratedValue(strategy = GenerationType.UUID)
     private String id;
 
-    @Column(nullable = false)
+    @Column(columnDefinition = "TEXT", nullable = false)
     private String title;
 
     @Column(nullable = false)
@@ -20,13 +20,20 @@ public class Property {
     private Integer rooms;
     private Integer beds;
     private Double baths;
+
+    @Column(columnDefinition = "TEXT")
     private String sqft;
+
+    @Column(columnDefinition = "TEXT")
     private String price;
 
-    @Column(length = 2048)
+    @Column(columnDefinition = "TEXT")
     private String image = "https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?q=80&w=2070&auto=format&fit=crop";
 
+    @Column(columnDefinition = "TEXT")
     private String address;
+
+    @Column(columnDefinition = "TEXT")
     private String phone;
 
     @ManyToOne(fetch = FetchType.EAGER)

@@ -6,6 +6,7 @@ import com.homespot.repository.PropertyRepository;
 import com.homespot.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
@@ -15,6 +16,9 @@ import java.util.Optional;
 
 @Component
 public class DatabaseSeeder implements CommandLineRunner {
+
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
 
     @Autowired
     private UserRepository userRepository;
@@ -27,6 +31,20 @@ public class DatabaseSeeder implements CommandLineRunner {
 
     @Override
     public void run(String... args) throws Exception {
+        try {
+            // Ensure PostgreSQL columns are TEXT to prevent "value too long for type character varying(255)"
+            jdbcTemplate.execute("ALTER TABLE properties ALTER COLUMN image TYPE TEXT;");
+            jdbcTemplate.execute("ALTER TABLE properties ALTER COLUMN title TYPE TEXT;");
+            jdbcTemplate.execute("ALTER TABLE properties ALTER COLUMN address TYPE TEXT;");
+            jdbcTemplate.execute("ALTER TABLE properties ALTER COLUMN price TYPE TEXT;");
+            jdbcTemplate.execute("ALTER TABLE properties ALTER COLUMN phone TYPE TEXT;");
+            jdbcTemplate.execute("ALTER TABLE properties ALTER COLUMN sqft TYPE TEXT;");
+            jdbcTemplate.execute("ALTER TABLE bookings ALTER COLUMN message TYPE TEXT;");
+            jdbcTemplate.execute("ALTER TABLE messages ALTER COLUMN text TYPE TEXT;");
+        } catch (Exception e) {
+            System.out.println("PostgreSQL schema column adjustment note: " + e.getMessage());
+        }
+
         try {
             if (propertyRepository.count() == 0) {
                 System.out.println("Seeding initial properties into PostgreSQL database (rental_hub)...");

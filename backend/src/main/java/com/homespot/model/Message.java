@@ -22,7 +22,7 @@ public class Message {
     @Column(name = "sender_name", nullable = false)
     private String senderName;
 
-    @Column(length = 2048, nullable = false)
+    @Column(columnDefinition = "TEXT", nullable = false)
     private String text;
 
     @Temporal(TemporalType.TIMESTAMP)

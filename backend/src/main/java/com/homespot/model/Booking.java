@@ -19,22 +19,23 @@ public class Booking {
     @JoinColumn(name = "tenant_id", nullable = false)
     private User tenant;
 
-    @Column(nullable = false)
+    @Column(columnDefinition = "TEXT", nullable = false)
     private String name;
 
-    @Column(nullable = false)
+    @Column(columnDefinition = "TEXT", nullable = false)
     private String email;
 
-    @Column(nullable = false)
+    @Column(columnDefinition = "TEXT", nullable = false)
     private String phone;
 
     @Temporal(TemporalType.TIMESTAMP)
     @Column(name = "move_in_date")
     private Date moveInDate;
 
+    @Column(columnDefinition = "TEXT")
     private String duration;
 
-    @Column(length = 2048)
+    @Column(columnDefinition = "TEXT")
     private String message;
 
     @Column(nullable = false)
