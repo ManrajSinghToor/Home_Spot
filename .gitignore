@@ -1,0 +1,22 @@
+# Build output
+target/
+backend/target/
+dist/
+frontend/dist/
+
+# Dependencies
+node_modules/
+
+# Local tools
+apache-maven-3.9.9/
+maven.tar.gz
+
+# Logs & temp files
+*.log
+.DS_Store
+.vscode/
+.idea/
+
+# Environment
+.env
+.env.local
