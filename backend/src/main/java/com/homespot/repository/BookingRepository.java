@@ -1,17 +1,14 @@
 package com.homespot.repository;
 
 import com.homespot.model.Booking;
-import org.springframework.data.mongodb.repository.MongoRepository;
-import org.springframework.data.mongodb.repository.Query;
+import com.homespot.model.Property;
+import com.homespot.model.User;
+import org.springframework.data.jpa.repository.JpaRepository;
 import java.util.List;
 
-public interface BookingRepository extends MongoRepository<Booking, String> {
-    @Query("{ 'tenant': ?0 }")
+public interface BookingRepository extends JpaRepository<Booking, String> {
+    List<Booking> findByTenant(User tenant);
     List<Booking> findByTenantId(String tenantId);
-
-    @Query("{ 'property': { $in: ?0 } }")
-    List<Booking> findByPropertyIdIn(List<String> propertyIds);
-
-    @Query("{ 'property': ?0, '_id': { $ne: ?1 }, 'status': { $in: ?2 } }")
-    List<Booking> findByPropertyIdAndIdNotAndStatusIn(String propertyId, String bookingId, List<String> statuses);
+    List<Booking> findByPropertyIn(List<Property> properties);
+    List<Booking> findByPropertyIdAndIdNotAndStatusIn(String propertyId, String id, List<String> statuses);
 }

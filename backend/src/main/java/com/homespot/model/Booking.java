@@ -1,36 +1,66 @@
 package com.homespot.model;
 
-import org.springframework.data.annotation.CreatedDate;
-import org.springframework.data.annotation.Id;
-import org.springframework.data.annotation.LastModifiedDate;
-import org.springframework.data.mongodb.core.mapping.Document;
-
+import jakarta.persistence.*;
 import java.util.Date;
-import java.util.Map;
 
-@Document(collection = "bookings")
+@Entity
+@Table(name = "bookings")
 public class Booking {
 
     @Id
+    @GeneratedValue(strategy = GenerationType.UUID)
     private String id;
 
-    private Object property;
-    private Object tenant;
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "property_id", nullable = false)
+    private Property property;
 
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "tenant_id", nullable = false)
+    private User tenant;
+
+    @Column(nullable = false)
     private String name;
+
+    @Column(nullable = false)
     private String email;
+
+    @Column(nullable = false)
     private String phone;
+
+    @Temporal(TemporalType.TIMESTAMP)
+    @Column(name = "move_in_date")
     private Date moveInDate;
+
     private String duration;
+
+    @Column(length = 2048)
     private String message;
+
+    @Column(nullable = false)
     private String status = "pending"; // 'pending', 'approved', 'declined', 'cancelled', 'completed'
+
+    @Column(name = "payment_status", nullable = false)
     private String paymentStatus = "unpaid"; // 'unpaid', 'paid'
 
-    @CreatedDate
+    @Temporal(TemporalType.TIMESTAMP)
+    @Column(name = "created_at", nullable = false, updatable = false)
     private Date createdAt;
 
-    @LastModifiedDate
+    @Temporal(TemporalType.TIMESTAMP)
+    @Column(name = "updated_at")
     private Date updatedAt;
+
+    @PrePersist
+    protected void onCreate() {
+        this.createdAt = new Date();
+        this.updatedAt = new Date();
+    }
+
+    @PreUpdate
+    protected void onUpdate() {
+        this.updatedAt = new Date();
+    }
 
     public Booking() {
     }
@@ -43,19 +73,19 @@ public class Booking {
         this.id = id;
     }
 
-    public Object getProperty() {
+    public Property getProperty() {
         return property;
     }
 
-    public void setProperty(Object property) {
+    public void setProperty(Property property) {
         this.property = property;
     }
 
-    public Object getTenant() {
+    public User getTenant() {
         return tenant;
     }
 
-    public void setTenant(Object tenant) {
+    public void setTenant(User tenant) {
         this.tenant = tenant;
     }
 
@@ -140,24 +170,10 @@ public class Booking {
     }
 
     public String getPropertyId() {
-        if (property == null) return null;
-        if (property instanceof Property) return ((Property) property).getId();
-        if (property instanceof Map) {
-            Object idObj = ((Map<?, ?>) property).get("id");
-            if (idObj == null) idObj = ((Map<?, ?>) property).get("_id");
-            return idObj != null ? idObj.toString() : null;
-        }
-        return property.toString();
+        return property != null ? property.getId() : null;
     }
 
     public String getTenantId() {
-        if (tenant == null) return null;
-        if (tenant instanceof User) return ((User) tenant).getId();
-        if (tenant instanceof Map) {
-            Object idObj = ((Map<?, ?>) tenant).get("id");
-            if (idObj == null) idObj = ((Map<?, ?>) tenant).get("_id");
-            return idObj != null ? idObj.toString() : null;
-        }
-        return tenant.toString();
+        return tenant != null ? tenant.getId() : null;
     }
 }

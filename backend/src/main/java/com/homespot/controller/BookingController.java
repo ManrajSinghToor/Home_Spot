@@ -19,7 +19,6 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.*;
-import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/bookings")
@@ -37,42 +36,6 @@ public class BookingController {
     @Autowired
     private MessageRepository messageRepository;
 
-    private void populateBookingDetails(Booking b) {
-        if (b == null) return;
-        if (b.getPropertyId() != null) {
-            Optional<Property> propOpt = propertyRepository.findById(b.getPropertyId());
-            if (propOpt.isPresent()) {
-                Property p = propOpt.get();
-                if (p.getLandlordId() != null) {
-                    Optional<User> landlordOpt = userRepository.findById(p.getLandlordId());
-                    if (landlordOpt.isPresent()) {
-                        User u = landlordOpt.get();
-                        Map<String, Object> landlordMap = new HashMap<>();
-                        landlordMap.put("id", u.getId());
-                        landlordMap.put("_id", u.getId());
-                        landlordMap.put("username", u.getUsername());
-                        landlordMap.put("email", u.getEmail());
-                        p.setLandlord(landlordMap);
-                    }
-                }
-                b.setProperty(p);
-            }
-        }
-
-        if (b.getTenantId() != null) {
-            Optional<User> tenantOpt = userRepository.findById(b.getTenantId());
-            if (tenantOpt.isPresent()) {
-                User u = tenantOpt.get();
-                Map<String, Object> tenantMap = new HashMap<>();
-                tenantMap.put("id", u.getId());
-                tenantMap.put("_id", u.getId());
-                tenantMap.put("username", u.getUsername());
-                tenantMap.put("email", u.getEmail());
-                b.setTenant(tenantMap);
-            }
-        }
-    }
-
     private void handlePropertySold(String bookingId, Property property, User landlord) {
         try {
             property.setStatus("rented");
@@ -87,8 +50,8 @@ public class BookingController {
                 bookingRepository.save(other);
 
                 Message systemMsg = new Message();
-                systemMsg.setBooking(other.getId());
-                systemMsg.setSender(landlord != null ? landlord.getId() : null);
+                systemMsg.setBooking(other);
+                systemMsg.setSender(landlord);
                 systemMsg.setSenderName("System Notification");
                 systemMsg.setText("This property has been sold out to another tenant. Your booking inquiry has been cancelled.");
                 messageRepository.save(systemMsg);
@@ -127,8 +90,8 @@ public class BookingController {
             }
 
             Booking booking = new Booking();
-            booking.setProperty(property.getId());
-            booking.setTenant(tenantOpt.get().getId());
+            booking.setProperty(property);
+            booking.setTenant(tenantOpt.get());
             booking.setName(req.getName());
             booking.setEmail(req.getEmail());
             booking.setPhone(req.getPhone());
@@ -139,7 +102,6 @@ public class BookingController {
             booking.setPaymentStatus("unpaid");
 
             Booking savedBooking = bookingRepository.save(booking);
-            populateBookingDetails(savedBooking);
 
             Map<String, Object> response = new HashMap<>();
             response.put("success", true);
@@ -160,14 +122,9 @@ public class BookingController {
             List<Booking> bookings;
             if ("landlord".equalsIgnoreCase(currentUser.getRole())) {
                 List<Property> landlordProps = propertyRepository.findByLandlordId(currentUser.getId());
-                List<String> propIds = landlordProps.stream().map(Property::getId).collect(Collectors.toList());
-                bookings = bookingRepository.findByPropertyIdIn(propIds);
+                bookings = bookingRepository.findByPropertyIn(landlordProps);
             } else {
                 bookings = bookingRepository.findByTenantId(currentUser.getId());
-            }
-
-            for (Booking b : bookings) {
-                populateBookingDetails(b);
             }
 
             Map<String, Object> response = new HashMap<>();
@@ -192,12 +149,9 @@ public class BookingController {
                 return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ApiResponse.error("Booking not found"));
             }
 
-            Booking booking = bookingOpt.get();
-            populateBookingDetails(booking);
-
             Map<String, Object> response = new HashMap<>();
             response.put("success", true);
-            response.put("booking", booking);
+            response.put("booking", bookingOpt.get());
             return ResponseEntity.ok(response);
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(ApiResponse.error(e.getMessage()));
@@ -233,26 +187,23 @@ public class BookingController {
             }
 
             if (req.getStatus() != null) {
-                Property property = null;
-                if (booking.getPropertyId() != null) {
-                    property = propertyRepository.findById(booking.getPropertyId()).orElse(null);
-                }
+                Property property = booking.getProperty();
 
                 if ("cancelled".equalsIgnoreCase(req.getStatus())) {
                     if ("paid".equalsIgnoreCase(booking.getPaymentStatus())) {
                         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                                 .body(ApiResponse.error("Cannot cancel a booking that is already paid."));
                     }
-                    boolean isTenant = (booking.getTenantId() != null && booking.getTenantId().equals(currentUser.getId())) ||
+                    boolean isTenant = (booking.getTenant() != null && booking.getTenant().getId().equals(currentUser.getId())) ||
                             (booking.getEmail() != null && booking.getEmail().equalsIgnoreCase(currentUser.getEmail()));
-                    boolean isLandlord = property != null && property.getLandlordId() != null && property.getLandlordId().equals(currentUser.getId());
+                    boolean isLandlord = property != null && property.getLandlord() != null && property.getLandlord().getId().equals(currentUser.getId());
 
                     if (!isTenant && !isLandlord) {
                         return ResponseEntity.status(HttpStatus.FORBIDDEN)
                                 .body(ApiResponse.error("Not authorized to cancel this booking"));
                     }
                 } else {
-                    if (property == null || property.getLandlordId() == null || !property.getLandlordId().equals(currentUser.getId())) {
+                    if (property == null || property.getLandlord() == null || !property.getLandlord().getId().equals(currentUser.getId())) {
                         return ResponseEntity.status(HttpStatus.FORBIDDEN)
                                 .body(ApiResponse.error("Only landlords can approve or decline requests"));
                     }
@@ -266,18 +217,10 @@ public class BookingController {
 
             Booking updatedBooking = bookingRepository.save(booking);
 
-            if (soldTriggered && booking.getPropertyId() != null) {
-                Property property = propertyRepository.findById(booking.getPropertyId()).orElse(null);
-                if (property != null) {
-                    User landlord = null;
-                    if (property.getLandlordId() != null) {
-                        landlord = userRepository.findById(property.getLandlordId()).orElse(null);
-                    }
-                    handlePropertySold(booking.getId(), property, landlord);
-                }
+            if (soldTriggered && booking.getProperty() != null) {
+                User landlord = booking.getProperty().getLandlord();
+                handlePropertySold(booking.getId(), booking.getProperty(), landlord);
             }
-
-            populateBookingDetails(updatedBooking);
 
             Map<String, Object> response = new HashMap<>();
             response.put("success", true);

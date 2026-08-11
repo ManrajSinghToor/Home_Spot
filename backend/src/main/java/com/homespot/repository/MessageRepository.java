@@ -1,11 +1,11 @@
 package com.homespot.repository;
 
+import com.homespot.model.Booking;
 import com.homespot.model.Message;
-import org.springframework.data.mongodb.repository.MongoRepository;
-import org.springframework.data.mongodb.repository.Query;
+import org.springframework.data.jpa.repository.JpaRepository;
 import java.util.List;
 
-public interface MessageRepository extends MongoRepository<Message, String> {
-    @Query(value = "{ 'booking': ?0 }", sort = "{ 'createdAt': 1 }")
+public interface MessageRepository extends JpaRepository<Message, String> {
+    List<Message> findByBookingOrderByCreatedAtAsc(Booking booking);
     List<Message> findByBookingIdOrderByCreatedAtAsc(String bookingId);
 }

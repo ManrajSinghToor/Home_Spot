@@ -1,39 +1,59 @@
 package com.homespot.model;
 
-import org.springframework.data.annotation.CreatedDate;
-import org.springframework.data.annotation.Id;
-import org.springframework.data.annotation.LastModifiedDate;
-import org.springframework.data.mongodb.core.mapping.Document;
-
+import jakarta.persistence.*;
 import java.util.Date;
-import java.util.Map;
 
-@Document(collection = "properties")
+@Entity
+@Table(name = "properties")
 public class Property {
 
     @Id
+    @GeneratedValue(strategy = GenerationType.UUID)
     private String id;
 
+    @Column(nullable = false)
     private String title;
+
+    @Column(nullable = false)
     private String city;
+
     private Integer rooms;
     private Integer beds;
     private Double baths;
     private String sqft;
     private String price;
+
+    @Column(length = 2048)
     private String image = "https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?q=80&w=2070&auto=format&fit=crop";
+
     private String address;
     private String phone;
 
-    private Object landlord;
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "landlord_id", nullable = false)
+    private User landlord;
 
+    @Column(nullable = false)
     private String status = "available"; // 'available' or 'rented'
 
-    @CreatedDate
+    @Temporal(TemporalType.TIMESTAMP)
+    @Column(name = "created_at", nullable = false, updatable = false)
     private Date createdAt;
 
-    @LastModifiedDate
+    @Temporal(TemporalType.TIMESTAMP)
+    @Column(name = "updated_at")
     private Date updatedAt;
+
+    @PrePersist
+    protected void onCreate() {
+        this.createdAt = new Date();
+        this.updatedAt = new Date();
+    }
+
+    @PreUpdate
+    protected void onUpdate() {
+        this.updatedAt = new Date();
+    }
 
     public Property() {
     }
@@ -126,11 +146,11 @@ public class Property {
         this.phone = phone;
     }
 
-    public Object getLandlord() {
+    public User getLandlord() {
         return landlord;
     }
 
-    public void setLandlord(Object landlord) {
+    public void setLandlord(User landlord) {
         this.landlord = landlord;
     }
 
@@ -159,15 +179,6 @@ public class Property {
     }
 
     public String getLandlordId() {
-        if (landlord == null) return null;
-        if (landlord instanceof User) {
-            return ((User) landlord).getId();
-        }
-        if (landlord instanceof Map) {
-            Object idObj = ((Map<?, ?>) landlord).get("id");
-            if (idObj == null) idObj = ((Map<?, ?>) landlord).get("_id");
-            return idObj != null ? idObj.toString() : null;
-        }
-        return landlord.toString();
+        return landlord != null ? landlord.getId() : null;
     }
 }

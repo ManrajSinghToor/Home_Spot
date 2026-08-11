@@ -29,9 +29,8 @@ public class DatabaseSeeder implements CommandLineRunner {
     public void run(String... args) throws Exception {
         try {
             if (propertyRepository.count() == 0) {
-                System.out.println("Seeding initial properties into MongoDB...");
+                System.out.println("Seeding initial properties into PostgreSQL database (rental_hub)...");
 
-                // Ensure seed landlord exists
                 Optional<User> adminOpt = userRepository.findByUsername("admin");
                 User landlord;
                 if (adminOpt.isEmpty()) {
@@ -49,7 +48,7 @@ public class DatabaseSeeder implements CommandLineRunner {
 
                 List<Property> seedProperties = createSeedProperties(landlord);
                 propertyRepository.saveAll(seedProperties);
-                System.out.println("Seeding properties complete. Inserted " + seedProperties.size() + " properties.");
+                System.out.println("Seeding properties complete. Inserted " + seedProperties.size() + " properties into PostgreSQL.");
             }
         } catch (Exception e) {
             System.err.println("Database seeding failed: " + e.getMessage());

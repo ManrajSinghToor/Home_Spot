@@ -1,35 +1,53 @@
 package com.homespot.model;
 
-import org.springframework.data.annotation.CreatedDate;
-import org.springframework.data.annotation.Id;
-import org.springframework.data.annotation.LastModifiedDate;
-import org.springframework.data.mongodb.core.mapping.Document;
-
+import jakarta.persistence.*;
 import java.util.Date;
-import java.util.Map;
 
-@Document(collection = "messages")
+@Entity
+@Table(name = "messages")
 public class Message {
 
     @Id
+    @GeneratedValue(strategy = GenerationType.UUID)
     private String id;
 
-    private Object booking;
-    private Object sender;
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "booking_id", nullable = false)
+    private Booking booking;
 
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "sender_id", nullable = false)
+    private User sender;
+
+    @Column(name = "sender_name", nullable = false)
     private String senderName;
+
+    @Column(length = 2048, nullable = false)
     private String text;
 
-    @CreatedDate
+    @Temporal(TemporalType.TIMESTAMP)
+    @Column(name = "created_at", nullable = false, updatable = false)
     private Date createdAt;
 
-    @LastModifiedDate
+    @Temporal(TemporalType.TIMESTAMP)
+    @Column(name = "updated_at")
     private Date updatedAt;
+
+    @PrePersist
+    protected void onCreate() {
+        this.createdAt = new Date();
+        this.updatedAt = new Date();
+    }
+
+    @PreUpdate
+    protected void onUpdate() {
+        this.updatedAt = new Date();
+    }
 
     public Message() {
     }
 
-    public Message(Object booking, Object sender, String senderName, String text) {
+    public Message(Booking booking, User sender, String senderName, String text) {
         this.booking = booking;
         this.sender = sender;
         this.senderName = senderName;
@@ -44,19 +62,19 @@ public class Message {
         this.id = id;
     }
 
-    public Object getBooking() {
+    public Booking getBooking() {
         return booking;
     }
 
-    public void setBooking(Object booking) {
+    public void setBooking(Booking booking) {
         this.booking = booking;
     }
 
-    public Object getSender() {
+    public User getSender() {
         return sender;
     }
 
-    public void setSender(Object sender) {
+    public void setSender(User sender) {
         this.sender = sender;
     }
 
@@ -93,13 +111,6 @@ public class Message {
     }
 
     public String getBookingId() {
-        if (booking == null) return null;
-        if (booking instanceof Booking) return ((Booking) booking).getId();
-        if (booking instanceof Map) {
-            Object idObj = ((Map<?, ?>) booking).get("id");
-            if (idObj == null) idObj = ((Map<?, ?>) booking).get("_id");
-            return idObj != null ? idObj.toString() : null;
-        }
-        return booking.toString();
+        return booking != null ? booking.getId() : null;
     }
 }

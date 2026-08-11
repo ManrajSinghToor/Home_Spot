@@ -1,32 +1,50 @@
 package com.homespot.model;
 
-import org.springframework.data.annotation.CreatedDate;
-import org.springframework.data.annotation.Id;
-import org.springframework.data.annotation.LastModifiedDate;
-import org.springframework.data.mongodb.core.mapping.Document;
-
+import jakarta.persistence.*;
 import java.util.Date;
-import java.util.Map;
 
-@Document(collection = "favorites")
+@Entity
+@Table(
+    name = "favorites",
+    uniqueConstraints = @UniqueConstraint(name = "uk_user_property", columnNames = {"user_id", "property_id"})
+)
 public class Favorite {
 
     @Id
+    @GeneratedValue(strategy = GenerationType.UUID)
     private String id;
 
-    private Object user;
-    private Object property;
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "user_id", nullable = false)
+    private User user;
 
-    @CreatedDate
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "property_id", nullable = false)
+    private Property property;
+
+    @Temporal(TemporalType.TIMESTAMP)
+    @Column(name = "created_at", nullable = false, updatable = false)
     private Date createdAt;
 
-    @LastModifiedDate
+    @Temporal(TemporalType.TIMESTAMP)
+    @Column(name = "updated_at")
     private Date updatedAt;
+
+    @PrePersist
+    protected void onCreate() {
+        this.createdAt = new Date();
+        this.updatedAt = new Date();
+    }
+
+    @PreUpdate
+    protected void onUpdate() {
+        this.updatedAt = new Date();
+    }
 
     public Favorite() {
     }
 
-    public Favorite(Object user, Object property) {
+    public Favorite(User user, Property property) {
         this.user = user;
         this.property = property;
     }
@@ -39,19 +57,19 @@ public class Favorite {
         this.id = id;
     }
 
-    public Object getUser() {
+    public User getUser() {
         return user;
     }
 
-    public void setUser(Object user) {
+    public void setUser(User user) {
         this.user = user;
     }
 
-    public Object getProperty() {
+    public Property getProperty() {
         return property;
     }
 
-    public void setProperty(Object property) {
+    public void setProperty(Property property) {
         this.property = property;
     }
 
@@ -72,24 +90,10 @@ public class Favorite {
     }
 
     public String getUserId() {
-        if (user == null) return null;
-        if (user instanceof User) return ((User) user).getId();
-        if (user instanceof Map) {
-            Object idObj = ((Map<?, ?>) user).get("id");
-            if (idObj == null) idObj = ((Map<?, ?>) user).get("_id");
-            return idObj != null ? idObj.toString() : null;
-        }
-        return user.toString();
+        return user != null ? user.getId() : null;
     }
 
     public String getPropertyId() {
-        if (property == null) return null;
-        if (property instanceof Property) return ((Property) property).getId();
-        if (property instanceof Map) {
-            Object idObj = ((Map<?, ?>) property).get("id");
-            if (idObj == null) idObj = ((Map<?, ?>) property).get("_id");
-            return idObj != null ? idObj.toString() : null;
-        }
-        return property.toString();
+        return property != null ? property.getId() : null;
     }
 }

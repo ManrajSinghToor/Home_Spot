@@ -8,7 +8,6 @@ import com.homespot.model.Property;
 import com.homespot.model.User;
 import com.homespot.repository.BookingRepository;
 import com.homespot.repository.MessageRepository;
-import com.homespot.repository.PropertyRepository;
 import com.homespot.repository.UserRepository;
 import com.homespot.security.UserPrincipal;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -30,9 +29,6 @@ public class MessageController {
     private BookingRepository bookingRepository;
 
     @Autowired
-    private PropertyRepository propertyRepository;
-
-    @Autowired
     private UserRepository userRepository;
 
     @GetMapping("/{bookingId}")
@@ -49,10 +45,10 @@ public class MessageController {
             }
 
             Booking booking = bookingOpt.get();
-            Property property = booking.getPropertyId() != null ? propertyRepository.findById(booking.getPropertyId()).orElse(null) : null;
+            Property property = booking.getProperty();
 
-            boolean isTenant = booking.getTenantId() != null && booking.getTenantId().equals(currentUser.getId());
-            boolean isLandlord = property != null && property.getLandlordId() != null && property.getLandlordId().equals(currentUser.getId());
+            boolean isTenant = booking.getTenant() != null && booking.getTenant().getId().equals(currentUser.getId());
+            boolean isLandlord = property != null && property.getLandlord() != null && property.getLandlord().getId().equals(currentUser.getId());
 
             if (!isTenant && !isLandlord) {
                 return ResponseEntity.status(HttpStatus.FORBIDDEN)
@@ -89,10 +85,10 @@ public class MessageController {
             }
 
             Booking booking = bookingOpt.get();
-            Property property = booking.getPropertyId() != null ? propertyRepository.findById(booking.getPropertyId()).orElse(null) : null;
+            Property property = booking.getProperty();
 
-            boolean isTenant = booking.getTenantId() != null && booking.getTenantId().equals(currentUser.getId());
-            boolean isLandlord = property != null && property.getLandlordId() != null && property.getLandlordId().equals(currentUser.getId());
+            boolean isTenant = booking.getTenant() != null && booking.getTenant().getId().equals(currentUser.getId());
+            boolean isLandlord = property != null && property.getLandlord() != null && property.getLandlord().getId().equals(currentUser.getId());
 
             if (!isTenant && !isLandlord) {
                 return ResponseEntity.status(HttpStatus.FORBIDDEN)
@@ -105,7 +101,7 @@ public class MessageController {
             }
 
             User sender = senderOpt.get();
-            Message message = new Message(booking.getId(), sender.getId(), sender.getUsername(), req.getText().trim());
+            Message message = new Message(booking, sender, sender.getUsername(), req.getText().trim());
             Message savedMsg = messageRepository.save(message);
 
             Map<String, Object> response = new HashMap<>();

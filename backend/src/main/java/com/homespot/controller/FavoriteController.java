@@ -16,6 +16,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/favorites")
@@ -32,30 +33,10 @@ public class FavoriteController {
 
     private List<Property> getFavoritePropertiesForUser(String userId) {
         List<Favorite> favorites = favoriteRepository.findByUserId(userId);
-        List<Property> propertyList = new ArrayList<>();
-        for (Favorite f : favorites) {
-            String propId = f.getPropertyId();
-            if (propId != null) {
-                Optional<Property> propOpt = propertyRepository.findById(propId);
-                if (propOpt.isPresent()) {
-                    Property p = propOpt.get();
-                    if (p.getLandlordId() != null) {
-                        Optional<User> landlordOpt = userRepository.findById(p.getLandlordId());
-                        if (landlordOpt.isPresent()) {
-                            User u = landlordOpt.get();
-                            Map<String, Object> landlordMap = new HashMap<>();
-                            landlordMap.put("id", u.getId());
-                            landlordMap.put("_id", u.getId());
-                            landlordMap.put("username", u.getUsername());
-                            landlordMap.put("email", u.getEmail());
-                            p.setLandlord(landlordMap);
-                        }
-                    }
-                    propertyList.add(p);
-                }
-            }
-        }
-        return propertyList;
+        return favorites.stream()
+                .map(Favorite::getProperty)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toList());
     }
 
     @GetMapping
@@ -103,7 +84,7 @@ public class FavoriteController {
 
             if (isFavorited) {
                 if (existingOpt.isEmpty()) {
-                    Favorite fav = new Favorite(currentUser.getId(), req.getPropertyId());
+                    Favorite fav = new Favorite(userOpt.get(), propertyOpt.get());
                     favoriteRepository.save(fav);
                 }
             } else {

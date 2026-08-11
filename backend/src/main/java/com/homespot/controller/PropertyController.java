@@ -24,23 +24,6 @@ public class PropertyController {
     @Autowired
     private UserRepository userRepository;
 
-    private void populateLandlord(Property p) {
-        if (p.getLandlord() == null) return;
-        String landlordId = p.getLandlordId();
-        if (landlordId != null) {
-            Optional<User> userOpt = userRepository.findById(landlordId);
-            if (userOpt.isPresent()) {
-                User u = userOpt.get();
-                Map<String, Object> landlordMap = new HashMap<>();
-                landlordMap.put("id", u.getId());
-                landlordMap.put("_id", u.getId());
-                landlordMap.put("username", u.getUsername());
-                landlordMap.put("email", u.getEmail());
-                p.setLandlord(landlordMap);
-            }
-        }
-    }
-
     @GetMapping
     public ResponseEntity<?> getAllProperties(@RequestParam(value = "landlord", required = false) String landlordId) {
         try {
@@ -49,10 +32,6 @@ public class PropertyController {
                 properties = propertyRepository.findByLandlordId(landlordId);
             } else {
                 properties = propertyRepository.findAll();
-            }
-
-            for (Property p : properties) {
-                populateLandlord(p);
             }
 
             Map<String, Object> response = new HashMap<>();
@@ -87,13 +66,12 @@ public class PropertyController {
                         .body(ApiResponse.error("Landlord account not found"));
             }
 
-            propertyData.setLandlord(landlordOpt.get().getId());
+            propertyData.setLandlord(landlordOpt.get());
             if (propertyData.getStatus() == null) {
                 propertyData.setStatus("available");
             }
 
             Property savedProperty = propertyRepository.save(propertyData);
-            populateLandlord(savedProperty);
 
             Map<String, Object> response = new HashMap<>();
             response.put("success", true);
@@ -123,8 +101,7 @@ public class PropertyController {
             }
 
             Property property = propertyOpt.get();
-            String landlordId = property.getLandlordId();
-            if (landlordId == null || !landlordId.equals(currentUser.getId())) {
+            if (property.getLandlord() == null || !property.getLandlord().getId().equals(currentUser.getId())) {
                 return ResponseEntity.status(HttpStatus.FORBIDDEN)
                         .body(ApiResponse.error("Not authorized to delete this listing"));
             }
