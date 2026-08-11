@@ -534,7 +534,7 @@ export default function Listings() {
                   Clear Filters
                 </button>
                 
-                {comparisonProperties.length > 0 && (
+                {comparisonProperties.length > 0 && !isChatOpen && (
                   <button 
                     onClick={() => navigate('/compare')}
                     style={{ padding: '12px 28px', border: 'none', borderRadius: '8px', fontSize: '1rem', fontWeight: '600', cursor: 'pointer', background: '#10b981', color: '#fff', display: 'flex', alignItems: 'center', gap: '8px' }}
@@ -588,11 +588,37 @@ export default function Listings() {
                             alt={property.title}
                             style={{ width: '100%', height: '180px', objectFit: 'cover', display: 'block' }}
                           />
+
+                          {/* Top-Left Corner: Chat with Owner Button */}
+                          <button
+                            onClick={(e) => handleOpenChatWithOwner(property, e)}
+                            style={{ 
+                              position: 'absolute',
+                              top: '10px',
+                              left: '10px',
+                              zIndex: 5,
+                              background: 'rgba(99, 102, 241, 0.9)', 
+                              border: '1px solid rgba(255,255,255,0.25)', 
+                              borderRadius: '50%', 
+                              width: '36px', 
+                              height: '36px', 
+                              display: 'flex', 
+                              alignItems: 'center', 
+                              justifyContent: 'center', 
+                              cursor: 'pointer', 
+                              color: '#fff',
+                              boxShadow: '0 4px 12px rgba(0,0,0,0.5)'
+                            }}
+                            title="Chat with Owner"
+                          >
+                            <i className="fas fa-comments" style={{ fontSize: '0.95rem' }}></i>
+                          </button>
+
                           {property.status === 'rented' && (
                             <div style={{
                               position: 'absolute',
-                              top: '15px',
-                              left: '15px',
+                              top: '10px',
+                              left: '54px',
                               background: 'rgba(239, 68, 68, 0.95)',
                               color: '#fff',
                               padding: '5px 12px',
@@ -608,27 +634,8 @@ export default function Listings() {
                             </div>
                           )}
                           
-                          {/* Actions overlay */}
+                          {/* Top-Right Corner: Heart, Compare, Share */}
                           <div style={{ position: 'absolute', top: '10px', right: '10px', display: 'flex', gap: '8px', zIndex: 3 }} onClick={e => e.stopPropagation()}>
-                            <button
-                              onClick={(e) => handleOpenChatWithOwner(property, e)}
-                              style={{ 
-                                background: 'rgba(9,9,11,0.85)', 
-                                border: '1px solid rgba(255,255,255,0.15)', 
-                                borderRadius: '50%', 
-                                width: '34px', 
-                                height: '34px', 
-                                display: 'flex', 
-                                alignItems: 'center', 
-                                justifyContext: 'center', 
-                                cursor: 'pointer', 
-                                color: '#818cf8' 
-                              }}
-                              title="Chat with Owner"
-                            >
-                              <i className="fas fa-comments"></i>
-                            </button>
-
                             <button
                               onClick={(e) => handleAddToFavorites(property, e)}
                               style={{ 
@@ -760,8 +767,8 @@ export default function Listings() {
         </section>
       </main>
 
-      {/* Floating Comparison Drawer when items are selected */}
-      {comparisonProperties.length > 0 && (
+      {/* Floating Comparison Drawer (Hidden whenever Chat is open) */}
+      {comparisonProperties.length > 0 && !isChatOpen && (
         <div style={{
           position: 'fixed',
           bottom: '20px',
