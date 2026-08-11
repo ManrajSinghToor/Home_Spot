@@ -156,7 +156,7 @@ export default function Login() {
     const newErrors = {};
 
     if (!loginData.username.trim()) {
-      newErrors.username = 'Username is required.';
+      newErrors.username = 'Username or Email is required.';
       valid = false;
     }
 
@@ -394,7 +394,7 @@ export default function Login() {
                       <input 
                         type="text" 
                         name="username"
-                        placeholder="Username" 
+                        placeholder="Username or Email" 
                         value={loginData.username}
                         onChange={handleLoginChange}
                         className="glass-input"

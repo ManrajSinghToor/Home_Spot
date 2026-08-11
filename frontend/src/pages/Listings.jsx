@@ -4,6 +4,7 @@ import { useUser } from '../contexts/UserContext';
 import { useToast } from '../components/Toast';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
+import ChatDrawer from '../components/ChatDrawer';
 import { api } from '../services/api';
 import ThreeDTilt from '../components/ThreeDTilt';
 import PageTransition from '../components/PageTransition';
@@ -13,7 +14,6 @@ import { motion, AnimatePresence } from 'framer-motion';
 function PunjabVectorMap({ hoveredProperty, activeCity, onCitySelect, properties }) {
   const canvasRef = useRef(null);
   
-  // Coordinate locations representing Ludhiana, Amritsar, Jalandhar, Mohali
   const cities = [
     { id: 'ludhiana', name: 'Ludhiana', x: 150, y: 220, count: properties.filter(p => p.city === 'ludhiana').length },
     { id: 'amritsar', name: 'Amritsar', x: 70, y: 90, count: properties.filter(p => p.city === 'amritsar').length },
@@ -30,7 +30,6 @@ function PunjabVectorMap({ hoveredProperty, activeCity, onCitySelect, properties
     const drawMap = () => {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-      // Draw grid coordinates in background
       ctx.strokeStyle = 'rgba(255, 255, 255, 0.02)';
       ctx.lineWidth = 1;
       const step = 20;
@@ -47,17 +46,15 @@ function PunjabVectorMap({ hoveredProperty, activeCity, onCitySelect, properties
         ctx.stroke();
       }
 
-      // Draw connection highways (network grid representing routes between Punjab cities)
       ctx.lineWidth = 2;
       ctx.strokeStyle = 'rgba(99, 102, 241, 0.15)';
       ctx.beginPath();
-      ctx.moveTo(cities[1].x, cities[1].y); // Amritsar
-      ctx.lineTo(cities[2].x, cities[2].y); // Jalandhar
-      ctx.lineTo(cities[0].x, cities[0].y); // Ludhiana
-      ctx.lineTo(cities[3].x, cities[3].y); // Mohali
+      ctx.moveTo(cities[1].x, cities[1].y);
+      ctx.lineTo(cities[2].x, cities[2].y);
+      ctx.lineTo(cities[0].x, cities[0].y);
+      ctx.lineTo(cities[3].x, cities[3].y);
       ctx.stroke();
 
-      // Draw glowing nodes for each city
       cities.forEach(c => {
         const isHovered = hoveredProperty && hoveredProperty.city === c.id;
         const isActive = activeCity === c.id;
@@ -66,7 +63,6 @@ function PunjabVectorMap({ hoveredProperty, activeCity, onCitySelect, properties
         ctx.shadowBlur = (isHovered || isActive) ? 22 : 8;
         ctx.shadowColor = (isHovered || isActive) ? '#a855f7' : '#6366f1';
         
-        // Dynamic node pulsers
         const pulse = 1 + Math.sin(Date.now() / 250) * 0.08;
         ctx.fillStyle = (isHovered || isActive) ? '#a855f7' : '#6366f1';
         
@@ -76,7 +72,6 @@ function PunjabVectorMap({ hoveredProperty, activeCity, onCitySelect, properties
         
         ctx.restore();
 
-        // City text labels
         ctx.font = 'bold 12px Poppins, sans-serif';
         ctx.fillStyle = (isHovered || isActive) ? '#fff' : '#a1a1aa';
         ctx.fillText(`${c.name.charAt(0).toUpperCase() + c.name.slice(1)} (${c.count})`, c.x + 16, c.y + 4);
@@ -85,7 +80,6 @@ function PunjabVectorMap({ hoveredProperty, activeCity, onCitySelect, properties
       animationId = requestAnimationFrame(drawMap);
     };
 
-    // Size fitting
     canvas.width = 300;
     canvas.height = 320;
     
@@ -107,7 +101,6 @@ function PunjabVectorMap({ hoveredProperty, activeCity, onCitySelect, properties
       <div style={{ position: 'relative', flexGrow: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <canvas ref={canvasRef} style={{ maxWidth: '100%', height: 'auto', display: 'block', background: 'transparent' }} />
         
-        {/* Clickable Overlay Regions for City nodes to filter listings */}
         {cities.map(c => (
           <button
             key={c.id}
@@ -138,7 +131,6 @@ export default function Listings() {
   const { showToast } = useToast();
   const [searchParams, setSearchParams] = useSearchParams();
   
-  // State for search and filtering
   const [searchFilters, setSearchFilters] = useState({
     city: '',
     rooms: '',
@@ -146,33 +138,27 @@ export default function Listings() {
     maxPrice: ''
   });
   
-  // State for sorting
   const [sortBy, setSortBy] = useState('default');
-  
-  // State for comparison
   const [comparisonProperties, setComparisonProperties] = useState([]);
   
-  // State for pagination
   const [currentPage, setCurrentPage] = useState(1);
   const propertiesPerPage = 4;
   
-  // State for filtered properties
   const [filteredProperties, setFilteredProperties] = useState([]);
   const [displayedProperties, setDisplayedProperties] = useState([]);
   
-  // State for results display
   const [resultsTitle, setResultsTitle] = useState('All Properties');
   const [resultsCount, setResultsCount] = useState(0);
   
-  // State for property detail modal
   const [selectedProperty, setSelectedProperty] = useState(null);
-  
-  // Track hovered property
   const [hoveredProperty, setHoveredProperty] = useState(null);
 
-  // Dynamic property list loaded from API
   const [allProperties, setAllProperties] = useState([]);
   const [userFavorites, setUserFavorites] = useState([]);
+
+  // Chat drawer states
+  const [activeChatBooking, setActiveChatBooking] = useState(null);
+  const [isChatOpen, setIsChatOpen] = useState(false);
 
   useEffect(() => {
     async function loadListings() {
@@ -185,7 +171,6 @@ export default function Listings() {
     }
     loadListings();
     
-    // Load comparison properties from storage
     const storedCompare = JSON.parse(localStorage.getItem('comparisonProperties') || '[]');
     setComparisonProperties(storedCompare);
   }, []);
@@ -204,14 +189,12 @@ export default function Listings() {
     loadUserFavorites();
   }, [user]);
 
-  // Helper function to extract price number from price string
   const getPriceNumber = (priceString) => {
     if (!priceString) return 0;
     const cleanStr = String(priceString).replace(/[^\d]/g, '');
     return cleanStr ? parseInt(cleanStr, 10) : 0;
   };
 
-  // Track recently viewed properties
   const addToRecentlyViewed = (property) => {
     const propId = String(property.id || property._id);
     const recentlyViewed = JSON.parse(localStorage.getItem('recentlyViewed')) || [];
@@ -221,7 +204,6 @@ export default function Listings() {
     localStorage.setItem('recentlyViewed', JSON.stringify(limited));
   };
 
-  // Initialize filters from URL parameters
   useEffect(() => {
     const cityParam = searchParams.get('city');
     const roomParam = searchParams.get('rooms');
@@ -242,7 +224,6 @@ export default function Listings() {
     }
   }, [searchParams]);
 
-  // Filter and sort properties based on search criteria
   useEffect(() => {
     let filtered = [...allProperties];
     
@@ -302,7 +283,6 @@ export default function Listings() {
     setResultsCount(filtered.length);
   }, [searchFilters, sortBy, allProperties]);
 
-  // Calculate pagination
   useEffect(() => {
     const startIndex = (currentPage - 1) * propertiesPerPage;
     const endIndex = startIndex + propertiesPerPage;
@@ -349,6 +329,41 @@ export default function Listings() {
   const handleViewDetails = (property) => {
     addToRecentlyViewed(property);
     setSelectedProperty(property);
+  };
+
+  const handleOpenChatWithOwner = async (property, e) => {
+    e?.stopPropagation();
+    if (!user) {
+      showToast('Please login to chat with property owner', 'warning');
+      navigate('/login');
+      return;
+    }
+
+    try {
+      const propId = String(property.id || property._id);
+      const userBookings = await api.bookings.getBookings();
+      let booking = (userBookings || []).find(b => String(b.property?.id || b.property?._id || b.property) === propId);
+
+      if (!booking) {
+        showToast('Connecting to owner...', 'info');
+        booking = await api.bookings.createBooking({
+          propertyId: propId,
+          name: user.username || 'Tenant',
+          email: user.email || 'tenant@gmail.com',
+          phone: '+91 98765-43210',
+          moveInDate: new Date().toISOString(),
+          duration: 'Flexible',
+          message: 'Inquiry: Interested in chatting about this property.',
+          status: 'pending'
+        });
+      }
+
+      setActiveChatBooking(booking);
+      setIsChatOpen(true);
+    } catch (err) {
+      console.error('Error starting owner chat:', err);
+      showToast('Failed to start chat with owner.', 'error');
+    }
   };
 
   const handleAddToFavorites = async (property, e) => {
@@ -596,6 +611,25 @@ export default function Listings() {
                           {/* Actions overlay */}
                           <div style={{ position: 'absolute', top: '10px', right: '10px', display: 'flex', gap: '8px', zIndex: 3 }} onClick={e => e.stopPropagation()}>
                             <button
+                              onClick={(e) => handleOpenChatWithOwner(property, e)}
+                              style={{ 
+                                background: 'rgba(9,9,11,0.85)', 
+                                border: '1px solid rgba(255,255,255,0.15)', 
+                                borderRadius: '50%', 
+                                width: '34px', 
+                                height: '34px', 
+                                display: 'flex', 
+                                alignItems: 'center', 
+                                justifyContext: 'center', 
+                                cursor: 'pointer', 
+                                color: '#818cf8' 
+                              }}
+                              title="Chat with Owner"
+                            >
+                              <i className="fas fa-comments"></i>
+                            </button>
+
+                            <button
                               onClick={(e) => handleAddToFavorites(property, e)}
                               style={{ 
                                 background: 'rgba(9,9,11,0.85)', 
@@ -796,12 +830,34 @@ export default function Listings() {
                 
                 <h3 style={{ fontSize: '1.8rem', color: 'var(--primary-color)', fontWeight: '600', marginBottom: '30px' }}>{selectedProperty.price}</h3>
                 
-                <div style={{ display: 'flex', gap: '15px' }}>
+                <div style={{ display: 'flex', gap: '15px', flexWrap: 'wrap' }}>
                   {selectedProperty.status === 'rented' ? (
                     <button disabled className="glow-btn" style={{ flex: 1, padding: '12px', background: '#27272a', color: '#71717a', border: 'none', borderRadius: '8px', fontSize: '1rem', fontWeight: '600', cursor: 'not-allowed', boxShadow: 'none' }}>Sold / Rented</button>
                   ) : (
                     <button onClick={() => handleBooking(selectedProperty)} className="glow-btn" style={{ flex: 1, padding: '12px', background: 'var(--primary-gradient)', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '1rem', fontWeight: '600', cursor: 'pointer' }}>Book Now</button>
                   )}
+
+                  <button
+                    onClick={(e) => handleOpenChatWithOwner(selectedProperty, e)}
+                    style={{
+                      flex: 1,
+                      padding: '12px',
+                      background: 'rgba(99, 102, 241, 0.15)',
+                      color: '#818cf8',
+                      border: '1px solid rgba(99, 102, 241, 0.3)',
+                      borderRadius: '8px',
+                      fontSize: '1rem',
+                      fontWeight: '600',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '8px'
+                    }}
+                  >
+                    <i className="fas fa-comments"></i> Chat with Owner
+                  </button>
+
                   {(() => {
                     const propId = String(selectedProperty.id || selectedProperty._id);
                     const isFav = userFavorites.some(fav => String(fav._id || fav.id) === propId);
@@ -833,6 +889,14 @@ export default function Listings() {
           </div>
         )}
       </AnimatePresence>
+
+      {/* Real-time Chat Drawer with Owner */}
+      <ChatDrawer
+        isOpen={isChatOpen}
+        onClose={() => setIsChatOpen(false)}
+        booking={activeChatBooking}
+        currentUser={user}
+      />
 
       <Footer />
     </PageTransition>
