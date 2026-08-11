@@ -151,11 +151,10 @@ export default function Listings() {
   
   // State for comparison
   const [comparisonProperties, setComparisonProperties] = useState([]);
-  const [showComparison, setShowComparison] = useState(false);
   
   // State for pagination
   const [currentPage, setCurrentPage] = useState(1);
-  const propertiesPerPage = 4; // reduced for side-by-side split screen height fit
+  const propertiesPerPage = 4;
   
   // State for filtered properties
   const [filteredProperties, setFilteredProperties] = useState([]);
@@ -179,7 +178,7 @@ export default function Listings() {
     async function loadListings() {
       try {
         const list = await api.properties.getListings();
-        setAllProperties(list);
+        setAllProperties(list || []);
       } catch (error) {
         console.error('Error loading properties in Listings:', error);
       }
@@ -214,8 +213,9 @@ export default function Listings() {
 
   // Track recently viewed properties
   const addToRecentlyViewed = (property) => {
+    const propId = String(property.id || property._id);
     const recentlyViewed = JSON.parse(localStorage.getItem('recentlyViewed')) || [];
-    const filtered = recentlyViewed.filter(p => p.id !== property.id);
+    const filtered = recentlyViewed.filter(p => String(p.id || p._id) !== propId);
     filtered.unshift({ ...property, viewedAt: Date.now() });
     const limited = filtered.slice(0, 5);
     localStorage.setItem('recentlyViewed', JSON.stringify(limited));
@@ -246,16 +246,14 @@ export default function Listings() {
   useEffect(() => {
     let filtered = [...allProperties];
     
-    // Apply filters
     if (searchFilters.city) {
-      filtered = filtered.filter(property => property.city === searchFilters.city);
+      filtered = filtered.filter(property => String(property.city).toLowerCase() === searchFilters.city.toLowerCase());
     }
     
     if (searchFilters.rooms) {
       filtered = filtered.filter(property => property.rooms >= parseInt(searchFilters.rooms));
     }
     
-    // Price filter
     if (searchFilters.minPrice) {
       const minPrice = parseInt(searchFilters.minPrice.replace(/,/g, ''));
       filtered = filtered.filter(property => getPriceNumber(property.price) >= minPrice);
@@ -266,7 +264,6 @@ export default function Listings() {
       filtered = filtered.filter(property => getPriceNumber(property.price) <= maxPrice);
     }
     
-    // Apply sorting
     if (sortBy !== 'default') {
       filtered.sort((a, b) => {
         switch (sortBy) {
@@ -279,9 +276,9 @@ export default function Listings() {
           case 'rooms-desc':
             return b.rooms - a.rooms;
           case 'sqft-asc':
-            return parseInt(a.sqft.replace(/,/g, '')) - parseInt(b.sqft.replace(/,/g, ''));
+            return parseInt(String(a.sqft).replace(/,/g, '')) - parseInt(String(b.sqft).replace(/,/g, ''));
           case 'sqft-desc':
-            return parseInt(b.sqft.replace(/,/g, '')) - parseInt(a.sqft.replace(/,/g, ''));
+            return parseInt(String(b.sqft).replace(/,/g, '')) - parseInt(String(a.sqft).replace(/,/g, ''));
           default:
             return 0;
         }
@@ -290,7 +287,6 @@ export default function Listings() {
     
     setFilteredProperties(filtered);
     
-    // Update results display
     let titleText = '';
     if (searchFilters.city && searchFilters.rooms) {
       titleText = `Properties in ${searchFilters.city.charAt(0).toUpperCase() + searchFilters.city.slice(1)} with ${searchFilters.rooms}+ Rooms`;
@@ -313,7 +309,6 @@ export default function Listings() {
     setDisplayedProperties(filteredProperties.slice(startIndex, endIndex));
   }, [filteredProperties, currentPage]);
 
-  // Handle search form submission
   const handleSearch = () => {
     const newParams = new URLSearchParams();
     if (searchFilters.city) newParams.set('city', searchFilters.city);
@@ -327,7 +322,6 @@ export default function Listings() {
     setSearchParams(newParams);
   };
 
-  // Handle clear filters
   const handleClearFilters = () => {
     setSearchFilters({ city: '', rooms: '', minPrice: '', maxPrice: '' });
     setSortBy('default');
@@ -335,7 +329,6 @@ export default function Listings() {
     setSearchParams({});
   };
 
-  // Handle pagination
   const handlePageChange = (page) => {
     setCurrentPage(page);
     const newParams = new URLSearchParams(searchParams);
@@ -353,13 +346,11 @@ export default function Listings() {
     navigate('/booking');
   };
 
-  // Handle view property details
   const handleViewDetails = (property) => {
     addToRecentlyViewed(property);
     setSelectedProperty(property);
   };
 
-  // Handle add to favorites
   const handleAddToFavorites = async (property, e) => {
     e?.stopPropagation();
     if (!user) {
@@ -368,7 +359,8 @@ export default function Listings() {
       return;
     }
     
-    const isAlreadyFavorite = userFavorites.some(fav => (fav._id || fav.id) === (property._id || property.id));
+    const propId = String(property.id || property._id);
+    const isAlreadyFavorite = userFavorites.some(fav => String(fav._id || fav.id) === propId);
     
     try {
       const updated = await api.favorites.toggleFavorite(property, !isAlreadyFavorite);
@@ -384,14 +376,14 @@ export default function Listings() {
     }
   };
 
-  // Handle add to comparison
   const handleToggleComparison = (property, e) => {
     e?.stopPropagation();
-    const isInComparison = comparisonProperties.some(p => p.id === property.id);
+    const propId = String(property.id || property._id);
+    const isInComparison = comparisonProperties.some(p => String(p.id || p._id) === propId);
     let updated;
     
     if (isInComparison) {
-      updated = comparisonProperties.filter(p => p.id !== property.id);
+      updated = comparisonProperties.filter(p => String(p.id || p._id) !== propId);
       setComparisonProperties(updated);
       showToast('Removed from comparison', 'info');
     } else {
@@ -406,7 +398,6 @@ export default function Listings() {
     localStorage.setItem('comparisonProperties', JSON.stringify(updated));
   };
 
-  // Map city selection
   const handleCitySelectFromMap = (cityId) => {
     setSearchFilters(prev => ({ ...prev, city: cityId }));
     setCurrentPage(1);
@@ -417,7 +408,6 @@ export default function Listings() {
     showToast(`Filtering listings for ${cityId.charAt(0).toUpperCase() + cityId.slice(1)}`, 'info');
   };
 
-  // Copy to clipboard
   const handleShare = (property, e) => {
     e?.stopPropagation();
     const shareUrl = `${window.location.origin}/listings?city=${property.city}`;
@@ -428,16 +418,13 @@ export default function Listings() {
     });
   };
 
-  // Calculate pagination info
   const totalPages = Math.ceil(filteredProperties.length / propertiesPerPage);
-  const startIndex = (currentPage - 1) * propertiesPerPage;
-  const endIndex = Math.min(startIndex + propertiesPerPage, filteredProperties.length);
 
   return (
     <PageTransition>
       <Header />
       
-      <main style={{ background: '#09090b', minHeight: '95vh', paddingBottom: '60px', position: 'relative' }}>
+      <main style={{ background: '#09090b', minHeight: '95vh', paddingBottom: '80px', position: 'relative' }}>
         <div className="grid-bg"></div>
 
         <section className="page-hero" style={{
@@ -565,10 +552,13 @@ export default function Listings() {
               ) : (
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(290px, 1fr))', gap: '25px' }}>
                   {displayedProperties.map((property) => {
-                    const isFav = userFavorites.some(fav => (fav._id || fav.id) === (property._id || property.id));
+                    const propId = String(property.id || property._id);
+                    const isFav = userFavorites.some(fav => String(fav._id || fav.id) === propId);
+                    const isComparing = comparisonProperties.some(p => String(p.id || p._id) === propId);
+
                     return (
                       <ThreeDTilt 
-                        key={property.id}
+                        key={propId}
                         className="property-card glass-panel"
                         maxTilt={6}
                         scale={1.01}
@@ -608,8 +598,8 @@ export default function Listings() {
                             <button
                               onClick={(e) => handleAddToFavorites(property, e)}
                               style={{ 
-                                background: 'rgba(9,9,11,0.75)', 
-                                border: '1px solid rgba(255,255,255,0.1)', 
+                                background: 'rgba(9,9,11,0.85)', 
+                                border: '1px solid rgba(255,255,255,0.15)', 
                                 borderRadius: '50%', 
                                 width: '34px', 
                                 height: '34px', 
@@ -624,57 +614,79 @@ export default function Listings() {
                               <i className={isFav ? "fas fa-heart" : "far fa-heart"}></i>
                             </button>
                           
-                          <button
-                            onClick={(e) => handleToggleComparison(property, e)}
-                            style={{ background: comparisonProperties.some(p => p.id === property.id) ? 'var(--primary-color)' : 'rgba(9,9,11,0.75)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '50%', width: '34px', height: '34px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#fff' }}
-                            title="Compare"
-                          >
-                            <i className="fas fa-balance-scale"></i>
-                          </button>
+                            <button
+                              onClick={(e) => handleToggleComparison(property, e)}
+                              style={{ 
+                                background: isComparing ? '#10b981' : 'rgba(9,9,11,0.85)', 
+                                border: `1px solid ${isComparing ? '#10b981' : 'rgba(255,255,255,0.15)'}`, 
+                                borderRadius: '50%', 
+                                width: '34px', 
+                                height: '34px', 
+                                display: 'flex', 
+                                alignItems: 'center', 
+                                justifyContent: 'center', 
+                                cursor: 'pointer', 
+                                color: '#fff' 
+                              }}
+                              title={isComparing ? "Remove from Comparison" : "Add to Comparison"}
+                            >
+                              <i className="fas fa-balance-scale"></i>
+                            </button>
                           
-                          <button
-                            onClick={(e) => handleShare(property, e)}
-                            style={{ background: 'rgba(9,9,11,0.75)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '50%', width: '34px', height: '34px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#a1a1aa' }}
-                            title="Share"
-                          >
-                            <i className="fas fa-share-alt"></i>
-                          </button>
+                            <button
+                              onClick={(e) => handleShare(property, e)}
+                              style={{ 
+                                background: 'rgba(9,9,11,0.85)', 
+                                border: '1px solid rgba(255,255,255,0.15)', 
+                                borderRadius: '50%', 
+                                width: '34px', 
+                                height: '34px', 
+                                display: 'flex', 
+                                alignItems: 'center', 
+                                justifyContent: 'center', 
+                                cursor: 'pointer', 
+                                color: '#a1a1aa' 
+                              }}
+                              title="Share"
+                            >
+                              <i className="fas fa-share-alt"></i>
+                            </button>
+                          </div>
                         </div>
-                      </div>
                       
-                      <div style={{ padding: '20px' }}>
-                        <div style={{ display: 'flex', gap: '15px', color: '#a1a1aa', fontSize: '0.8rem', marginBottom: '12px', borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: '10px' }}>
-                          <span><i className="fas fa-bed"></i> {property.beds} Beds</span>
-                          <span><i className="fas fa-bath"></i> {property.baths} Baths</span>
-                          <span><i className="fas fa-ruler"></i> {property.sqft} sqft</span>
+                        <div style={{ padding: '20px' }}>
+                          <div style={{ display: 'flex', gap: '15px', color: '#a1a1aa', fontSize: '0.8rem', marginBottom: '12px', borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: '10px' }}>
+                            <span><i className="fas fa-bed"></i> {property.beds}</span>
+                            <span><i className="fas fa-bath"></i> {property.baths}</span>
+                            <span><i className="fas fa-ruler-combined"></i> {property.sqft}</span>
+                          </div>
+                          
+                          <h3 style={{ fontSize: '1.15rem', color: '#fff', marginBottom: '5px', fontWeight: '600' }}>{property.title}</h3>
+                          <p style={{ color: 'var(--primary-color)', fontWeight: '600', fontSize: '1.1rem', marginBottom: '15px' }}>{property.price}</p>
+                          
+                          {property.status === 'rented' ? (
+                            <button 
+                              disabled
+                              className="glow-btn"
+                              style={{ width: '100%', padding: '10px', background: '#27272a', color: '#71717a', border: 'none', borderRadius: '6px', fontWeight: '600', fontSize: '0.85rem', cursor: 'not-allowed', boxShadow: 'none' }}
+                            >
+                              Sold / Rented
+                            </button>
+                          ) : (
+                            <button 
+                              onClick={(e) => { e.stopPropagation(); handleBooking(property); }}
+                              className="glow-btn"
+                              style={{ width: '100%', padding: '10px', background: 'var(--primary-gradient)', color: '#fff', border: 'none', borderRadius: '6px', fontWeight: '600', fontSize: '0.85rem', cursor: 'pointer' }}
+                            >
+                              Book Now
+                            </button>
+                          )}
                         </div>
-                        
-                        <h3 style={{ fontSize: '1.15rem', color: '#fff', marginBottom: '5px', fontWeight: '600' }}>{property.title}</h3>
-                        <p style={{ color: 'var(--primary-color)', fontWeight: '600', fontSize: '1.1rem', marginBottom: '15px' }}>{property.price}</p>
-                        
-                        {property.status === 'rented' ? (
-                          <button 
-                            disabled
-                            className="glow-btn"
-                            style={{ width: '100%', padding: '10px', background: '#27272a', color: '#71717a', border: 'none', borderRadius: '6px', fontWeight: '600', fontSize: '0.85rem', cursor: 'not-allowed', boxShadow: 'none' }}
-                          >
-                            Sold / Rented
-                          </button>
-                        ) : (
-                          <button 
-                            onClick={(e) => { e.stopPropagation(); handleBooking(property); }}
-                            className="glow-btn"
-                            style={{ width: '100%', padding: '10px', background: 'var(--primary-gradient)', color: '#fff', border: 'none', borderRadius: '6px', fontWeight: '600', fontSize: '0.85rem', cursor: 'pointer' }}
-                          >
-                            Book Now
-                          </button>
-                        )}
-                      </div>
-                    </ThreeDTilt>
-                  );
-                })}
-              </div>
-            )}
+                      </ThreeDTilt>
+                    );
+                  })}
+                </div>
+              )}
 
               {/* Pagination controls */}
               {totalPages > 1 && (
@@ -713,6 +725,45 @@ export default function Listings() {
           </div>
         </section>
       </main>
+
+      {/* Floating Comparison Drawer when items are selected */}
+      {comparisonProperties.length > 0 && (
+        <div style={{
+          position: 'fixed',
+          bottom: '20px',
+          right: '20px',
+          zIndex: 9999,
+          background: 'rgba(15, 15, 20, 0.95)',
+          backdropFilter: 'blur(12px)',
+          border: '1px solid rgba(16, 185, 129, 0.4)',
+          borderRadius: '12px',
+          padding: '12px 20px',
+          boxShadow: '0 10px 30px rgba(0,0,0,0.8)',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '15px'
+        }}>
+          <div style={{ color: '#fff', fontSize: '0.9rem', fontWeight: '500', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <i className="fas fa-balance-scale" style={{ color: '#10b981' }}></i>
+            <span>Comparing <strong>{comparisonProperties.length}/3</strong> items</span>
+          </div>
+          <button
+            onClick={() => navigate('/compare')}
+            style={{
+              background: '#10b981',
+              color: '#fff',
+              border: 'none',
+              borderRadius: '8px',
+              padding: '8px 16px',
+              fontWeight: '600',
+              cursor: 'pointer',
+              fontSize: '0.85rem'
+            }}
+          >
+            Compare Now
+          </button>
+        </div>
+      )}
       
       {/* Property Details Modal Overlay */}
       <AnimatePresence>
@@ -735,9 +786,9 @@ export default function Listings() {
                 <h2 style={{ fontSize: '1.75rem', color: '#fff', marginBottom: '15px', fontWeight: '700' }}>{selectedProperty.title}</h2>
                 
                 <div style={{ display: 'flex', gap: '20px', color: '#a1a1aa', fontSize: '0.9rem', marginBottom: '20px' }}>
-                  <span><i className="fas fa-bed"></i> {selectedProperty.beds} Beds</span>
-                  <span><i className="fas fa-bath"></i> {selectedProperty.baths} Baths</span>
-                  <span><i className="fas fa-ruler"></i> {selectedProperty.sqft} sqft</span>
+                  <span><i className="fas fa-bed"></i> {selectedProperty.beds}</span>
+                  <span><i className="fas fa-bath"></i> {selectedProperty.baths}</span>
+                  <span><i className="fas fa-ruler-combined"></i> {selectedProperty.sqft}</span>
                 </div>
                 
                 <p style={{ color: '#e4e4e7', marginBottom: '15px' }}><i className="fas fa-map-marker-alt" style={{ marginRight: '8px', color: 'var(--primary-color)' }}></i> {selectedProperty.address}</p>
@@ -752,7 +803,8 @@ export default function Listings() {
                     <button onClick={() => handleBooking(selectedProperty)} className="glow-btn" style={{ flex: 1, padding: '12px', background: 'var(--primary-gradient)', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '1rem', fontWeight: '600', cursor: 'pointer' }}>Book Now</button>
                   )}
                   {(() => {
-                    const isFav = userFavorites.some(fav => (fav._id || fav.id) === (selectedProperty._id || selectedProperty.id));
+                    const propId = String(selectedProperty.id || selectedProperty._id);
+                    const isFav = userFavorites.some(fav => String(fav._id || fav.id) === propId);
                     return (
                       <button 
                         onClick={(e) => handleAddToFavorites(selectedProperty, e)} 
